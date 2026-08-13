@@ -366,6 +366,7 @@ master_dataset_v3.csv는 한 칸으로 안 되고 구 + 행정동명을 합쳐�
 
 # PK를 찾아주는 함수
 def infer_pk(columns, rows):
+    # 1) 칸 하나로 되는지 먼저 본다 (기존 로직)
     for col in columns:
         # 코드 컬럼이 아니면 제외
         if not is_code_column(col):
@@ -378,7 +379,17 @@ def infer_pk(columns, rows):
         
         # value 값이 중복되지 않으면 그건 PK
         if len(set(values)) == len(values):
-            return col
+            return [col]    # 리스트로 통일 (2)번과 형태 맞추려고)
+    
+    # 2) 칸 하나로 안 되면, 코드 컬럼 두 개씩 짝지어 시도한다
+    code_cols = [c for c in columns if is_code_column(c) or c in ("구", "행정동명")]
+
+    for i in range(len(code_cols)):
+        for j in range(i + 1, len(code_cols)):
+            c1, c2 = code_cols[i], code_cols[j]
+            combo = [r[c1] + "|" + r[c2] for r in rows]
+            if len(set(combo)) == len(rows):
+                return [c1, c2]
         
     # 위의 조건이 모두 만족하지 않는다면 PK가 없음
     return None
@@ -395,3 +406,56 @@ customers_v2.csv         PK: customer_id
 master_dataset_v3.csv    PK: None
 nemotron.csv             PK: uuid
 """
+
+
+# 복합키(master_dataset_v3.csv)
+columns, rows = read_csv(DATA_DIR / "master_dataset_v3.csv", limit=500)
+
+gu_values = [r["구"] for r in rows]
+dong_values = [r["행정동명"] for r in rows]
+
+#print("구 종류 수:", len(set(gu_values)))          # 25개뿐 -> 중복 많음
+#print("행정동명 종류 수:", len(set(dong_values)))   # 427개 나와야 하는데 1개 부족
+"""
+# 중복된 행정구를 찾아본다.
+from collections import Counter
+
+dong_values = [r["행정동명"] for r in rows]
+counts = Counter(dong_values)
+
+for name, n in counts.items():
+    if n > 1:
+        print(f"{name}  {n}번 나옴")  #신사동이 중복됨
+
+for r in rows:
+    if r["행정동명"] == "신사동":
+        print(r["구"], r["행정동명"]) # 관악구 신사동, 강남구 신사동
+"""
+# 구+동 조합 확인
+combo = [r["구"] + "|" + r["행정동명"] for r in rows]
+
+#print("합친 값 종류 수:", len(set(combo)))
+#print("전체 행 수:", len(rows))             # 둘 다 427개로 일치
+
+
+# 안전한 PK를 만들기 위한 함수 추가 (infer_pk에 2) 추가함)
+
+""" 정상출력확인
+if __name__ == "__main__":
+    path = DATA_DIR / "master_dataset_v3.csv"
+    columns, rows = read_csv(path, limit=500)
+    pk = infer_pk(columns, rows)
+    print("PK:", pk)
+"""
+
+
+
+
+
+
+
+
+
+
+
+    
