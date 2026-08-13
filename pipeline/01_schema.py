@@ -449,7 +449,7 @@ if __name__ == "__main__":
 
 # ------------------------------------------------------------------------------
 
-# 4단계 : FK 찾기
+# 4단계 : 사전 확인
 
 """
 01_schema.py
@@ -534,10 +534,81 @@ master_dataset_v3 검사할 때:
 
 # 5단계 : tables 딕셔너리로 전부 묶기
 
+""" 
+지금까지 만든 함수들(read_csv, describe용 재료, infer_pk)을 한 표당 한 번씩 모아서 딕셔너리 하나에 담는 거예요. 수업 코드를 거의 그대로 쓰시되, 표 이름 자리만 path.stem이 아니라 table_name(path)로 바꾸시면 돼요.
+"""
+
+# 1. 모든 테이블별 필드, 데이터타입, PK 구하기
+tables = {}
+for path in sorted(DATA_DIR.glob("*.csv")):
+    columns, rows = read_csv(path, limit=SAMPLE_SIZE)
+    name = table_name(path)     # ← path.stem 대신 이걸 써야 v2가 떨어진 이름으로 저장됨
+    tables[name] = {
+        "columns" : columns,
+        "rows" : rows,
+        "type" : {col: ("TEXT" if is_code_column(col) else infer_type([r[col] for r in rows])) for col in columns},
+        "pk" : infer_pk(columns, rows)
+    }
+
+#if __name__ == "__main__":
+#    print(tables["customers"]["pk"])
+#    print(tables["customers"]["type"])
 
 
+# ------------------------------------------------------------------------------
 
+# 6단계 : FK(외래키) 찾기
 
+""" 
+우리 데이터에 옮기기 전에 짚을 것 두 개
+
+① col.endswith("_id") → is_code_column(col)로
+
+전에 infer_pk에서 이미 이렇게 바꾸셨죠. 여기도 같은 이유예요 — uuid처럼 _id로 안 끝나는 코드 칸을 놓치지 않으려고요. 다만 지금 우리 표에서 FK가 될 만한 건 전부 customer_id라 _id로 끝나긴 해요. 그래도 일관성 있게 바꿔두는 게 좋아요.
+
+② tables[owner]["pk"] != col → 지금은 pk가 리스트예요
+
+전에 infer_pk를 고쳐서 pk가 'customer_id'(글자)가 아니라 ['customer_id'](리스트)로 나오게 하셨죠. 그러니 이 비교도 리스트끼리 비교하도록 바꿔야 해요:
+"""
+
+# 2. 특정 테이블에 연결되어 있는 외래키 찾기
+for name, table in tables.items(): # 표 이름과 내용을 그룹으로 꺼냄
+    
+    # 특정 테이블에 복수개의 외래키가 담길 수 있으므로 빈 리스트 생성
+    fks = []
+    
+    # 현재 반복도는 테이블의 코드컬럼이 없으면 제외(PK, FK 아님)
+    for col in table["columns"]:
+        if not is_code_column(col):
+            continue
+        # 테이블의 PK의 주인 테이블 몇 찾음    
+        owner = owner_of(col,tables)
+        
+        # 현재 반복도는 후보 키값들 중에서 owner 값이 동일하면 FK 제외 (PK)
+        if not owner or owner == name:
+            continue
+        
+        # 반복도는 테이블의 주인키와 현재 컬럼의 키값이 같지 않으면
+        if tables[owner]["pk"] != [col]:
+            continue
+        
+        # fks란 빈 배열에 FK, 테이블 명 저장
+        fks.append((col, owner))
+        
+    table["fks"] = fks
+        
+    print(fks)
+    
+""" 두개가 떠야하는데 한개만 뜸!
+[]
+[]
+[]
+[('customer_id', 'customers')]
+"""    
+
+# 원인 찾기
+print(tables["nemotron"]["columns"])
+# 검색결과 대응하는 FK가 없음
 
 
 
