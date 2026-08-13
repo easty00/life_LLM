@@ -416,8 +416,7 @@ dong_values = [r["행정동명"] for r in rows]
 
 #print("구 종류 수:", len(set(gu_values)))          # 25개뿐 -> 중복 많음
 #print("행정동명 종류 수:", len(set(dong_values)))   # 427개 나와야 하는데 1개 부족
-"""
-# 중복된 행정구를 찾아본다.
+""" # 중복된 행정구를 찾아본다.
 from collections import Counter
 
 dong_values = [r["행정동명"] for r in rows]
@@ -447,6 +446,94 @@ if __name__ == "__main__":
     pk = infer_pk(columns, rows)
     print("PK:", pk)
 """
+
+# ------------------------------------------------------------------------------
+
+# 4단계 : FK 찾기
+
+"""
+01_schema.py
+├── read_csv        CSV 읽기 (BOM 처리, limit)
+├── count_rows      줄 수 세기 (메모리 안 먹음)
+├── human_size       바이트 → 사람이 읽기 좋은 크기
+├── preview          파일 하나 요약 출력
+├── is_code_column   코드성 칸 판별
+├── looks_int/float/date   값 하나가 무슨 타입인지
+├── infer_type       칸 전체를 보고 타입 결정
+├── describe         파일 하나의 칸별 타입 출력
+└── infer_pk         PK 찾기 (단일키 + 복합키)
+
+이제 각 CSV의 PK가 뭔지, 칸 타입이 뭔지까지 자동으로 잡을 수 있게 됐어요. 수업의 01_schema.py가 원래 하려던 걸 우리 데이터로 다 통과시킨 거예요.
+
+수업에서 남은 건 owner_of(PK의 주인 표 찾기)랑 그걸로 FK 연결하는 부분이에요. 이게 되면:
+
+customers.customer_id  ←  user_preferences.customer_id  (FK)
+customers.customer_id  ←  nemotron.customer_id            (FK)
+
+이런 관계가 자동으로 잡혀서, 나중에 CREATE TABLE에 FOREIGN KEY를 자동 생성할 수 있는 재료가 돼요.
+
+다만 여기서 하나 미리 알려드릴 게 있어요 — 수업 코드의 owner_of는 표 이름 하나를 다루는 구조인데, 지금 우리는 PK가 리스트(['구', '행정동명'])로 바뀌었죠. master_dataset_v3처럼 복합키를 가진 표는 FK로 연결될 일이 없어서(다른 표가 "구+행정동명"을 참조하진 않으니) 큰 문제는 없을 텐데, 이 부분은 직접 짜보시면서 막히면 말씀해주세요.
+
+***개념 먼저***
+
+수업의 owner_of는 이런 논리였어요:
+    def owner_of(column, tables):
+        stem = column[:-3]     # 'customer_id' -> 'customer'
+        for candidate in (stem, stem+"s", stem+"es"):
+            if candidate in tables:
+                return candidate
+        return None
+
+"칸 이름이 customer_id면, 뒤에 _id를 떼고(customer) 거기에 s나 es를 붙인 이름(customers)의 표를 찾는다"는 거예요. 영어 복수형 규칙에 기댄 방식이죠.
+
+"""
+
+# 별칭 적용
+TABLE_ALIAS = {
+    "customers_v2": "customers",
+}
+
+def table_name(path):
+    stem = path.stem
+    return TABLE_ALIAS.get(stem, stem)
+
+tables = ["customers", "user_preferences", "nemotron", "master_dataset_v3"]
+
+def owner_of(column, tables):
+    stem = column[:-3]     # 'customer_id' -> 'customer'
+    for candidate in (stem, stem+"s", stem+"es"):
+        if candidate in tables:
+            return candidate
+    return None
+
+
+# 제대로 적용되는지 확인
+if __name__ == "__main__":
+    tables = ["customers", "user_preferences", "nemotron", "master_dataset_v3"]
+    print(owner_of("customer_id", tables))   # 'customers' 나와야 함
+    print(owner_of("region_id", tables))     # None 나와야 함 (그런 표 없음)
+
+""" 
+실제로 우리 데이터에 돌리면 어떻게 되나
+
+user_preferences 표 검사할 때:
+
+customer_id 칸 발견 → owner_of 호출 → customers 표에 PK가 customer_id인 걸 확인 → FK 연결됨
+
+nemotron 표 검사할 때:
+
+customer_id 칸 발견 → 역시 customers로 연결됨
+uuid 칸은? → _id로 안 끝나서(is_code_column으로 바꾼 버전이면 코드 컬럼이긴 함) 검사 대상에 들어가긴 하는데, owner_of("uuid", ...)를 해보면 uui를 떼는 이상한 계산이 나와서 None이 나올 거예요. 이건 정상이에요 — uuid는 이 표 자신의 PK지 남의 표를 참조하는 FK가 아니니까요.
+
+master_dataset_v3 검사할 때:
+
+이 표엔 _id로 끝나거나 코드로 보이는 칸이 행정동ID_8자리, hnet_code 정도인데, 이것들의 주인 표(행정동ID, hnet)가 존재하지 않으니 전부 None → FK 없음. 이것도 맞는 결과예요, master_dataset_v3는 다른 표를 참조 안 하니까요.
+"""
+
+# ------------------------------------------------------------------------------
+
+# 5단계 : tables 딕셔너리로 전부 묶기
+
 
 
 
