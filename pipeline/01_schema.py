@@ -179,6 +179,8 @@ if __name__ == "__main__":
 
 # ------------------------------------------------------------------------------
 
+# 2단계
+
 """
 뭘 하는 건가
 
@@ -347,10 +349,49 @@ if __name__ == "__main__":
 """
 
 
+# ------------------------------------------------------------------------------
 
+# 3단계 : PK 찾기
 
+"""
+다음은 수업의 infer_pk 차례예요. 미리 짚어드릴 게 하나 있어요.
 
+수업 규칙은 **"이름이 _id로 끝나는 칸 중, 값이 안 겹치는 것"**이었죠. 그런데 저번에 봤듯 우리 데이터엔:
 
+nemotron.csv의 열쇠는 uuid — _id로 안 끝남
+master_dataset_v3.csv는 한 칸으로 안 되고 구 + 행정동명을 합쳐야 열쇠가 됨
 
+이 두 개가 수업 규칙 그대로는 안 잡혀요. is_code_column을 이미 만들어두셨으니, PK 후보를 "이름이 _id로 끝나는 것"이 아니라 "코드 컬럼인 것"으로 바꾸는 방향이 자연스러울 것 같아요.
+"""
 
+# PK를 찾아주는 함수
+def infer_pk(columns, rows):
+    for col in columns:
+        # 코드 컬럼이 아니면 제외
+        if not is_code_column(col):
+            continue
+        
+        # value 값이 빈 문자열은 제외
+        values = [r[col] for r in rows]
+        if "" in values:
+            continue
+        
+        # value 값이 중복되지 않으면 그건 PK
+        if len(set(values)) == len(values):
+            return col
+        
+    # 위의 조건이 모두 만족하지 않는다면 PK가 없음
+    return None
 
+#if __name__ == "__main__":
+#    for name in ["customers_v2.csv", "master_dataset_v3.csv", "nemotron.csv"]:
+#        path = DATA_DIR / name
+#        columns, rows = read_csv(path, limit=500)
+#        pk = infer_pk(columns, rows)
+#        print(f"{name:24s} PK: {pk}")
+
+""" 출력결과
+customers_v2.csv         PK: customer_id
+master_dataset_v3.csv    PK: None
+nemotron.csv             PK: uuid
+"""
