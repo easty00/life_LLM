@@ -23,8 +23,9 @@ csv.field_size_limit(10*1024*1024)
 # 타입을 살펴볼 때 읽을 줄 수. 11만 줄을 전부 읽을 필요가 없다.
 SAMPLE_SIZE = 500
 
-
+########
 ### 1단계 : 파일 읽기
+########
 
 def read_csv(path, limit=None):
     """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다.
@@ -99,13 +100,65 @@ def human_size(num_bytes):
             return f"{size:.1f} {unit}"
         size /= 1024
 
-path = DATA_DIR / "customers_v2.csv"
+#path = DATA_DIR / "customers_v2.csv"
 
-if __name__ == "__main__":
-    print(human_size(path.stat().st_size))          # -> '10.8 KB'
-    print(human_size(459720304))     # -> '438.4 MB' (nemotron.csv 실제 크기)
-    print(human_size(500))           # -> '500.0 B'  (1024보다 작은 경우)
+#if __name__ == "__main__":
+#    print(human_size(path.stat().st_size))          # -> '10.8 KB'
+#    print(human_size(459720304))     # -> '438.4 MB' (nemotron.csv 실제 크기)
+#    print(human_size(500))           # -> '500.0 B'  (1024보다 작은 경우)
     
+def preview(path, limit=SAMPLE_SIZE, count_all=True):
+    """파일 하나를 확인해서 화면에 뿌린다."""
+    columns, rows = read_csv(path, limit=limit)
     
+    # 큰 파일은 줄 세는 데도 시간이 걸리니 건너뛸 수 있게 했다
+    total = count_rows(path) if count_all else None
+    total_text = f"{total:,}행" if total is not None else "행수 미확인"
     
+    print(f"⏳ [{path.name}] 파일을 확인하는 중...")
+    print(f"✅ {human_size(path.stat().st_size)} · {total_text} · {len(columns)}칸")
+    print()
     
+    # 칸 이름과, 그 칸의 첫 번째 값(비어있지 않은 것)을 나란히 보여준다
+    for column in columns:
+        # next(조건에 맞는 값들, 없을 때 쓸 기본값)
+        # 빈칸이 아닌 첫 값을 하나만 꺼낸다
+        example = next((r[column] for r in rows if r[column] not in ("", None)), "")
+        example = example.replace("\n", " ")
+        
+        # 페르소나 서술문은 아주 기니까 잘라서 보여준다
+        if len(example) > 60:
+            example = example[:60] + " ..."
+            
+        print(f"    💬 {column:28s} {example}")
+    print()    
+
+#if __name__ == "__main__":
+#    path = DATA_DIR / "customers_v2.csv"
+#    preview(path)
+#    ''' 잘 출력됨!
+#      [customers_v2.csv] 파일을 확인하는 중...
+#✅ 10.8 KB · 100행 · 11칸
+#
+#    💬 customer_id                  C001
+#    💬 name                         전기태
+#    💬 gender                       M
+#    💬 age                          74
+#    💬 phone                        010-4949-1773
+#    💬 email                        sungmin70@example.com
+#    💬 city                         동대문구
+#    💬 city_dong                    전농제1동
+#    💬 work_city                    영등포구
+#    💬 work_dong                    영등포동
+#    💬 joined_at                    2024-03-30
+#    '''
+
+
+
+
+
+
+
+
+
+
