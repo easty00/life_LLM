@@ -92,4 +92,20 @@ def count_rows(path):
 #    print(count_rows(path))   # 100 나와야 함 -> 나옴!
 
 def human_size(num_bytes):
+    """1234567 -> '1.2 MB' 처럼 사람이 읽기 좋게 바꾼다."""
+    size = float(num_bytes)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.1f} {unit}"
+        size /= 1024
+
+path = DATA_DIR / "customers_v2.csv"
+
+if __name__ == "__main__":
+    print(human_size(path.stat().st_size))          # -> '10.8 KB'
+    print(human_size(459720304))     # -> '438.4 MB' (nemotron.csv 실제 크기)
+    print(human_size(500))           # -> '500.0 B'  (1024보다 작은 경우)
+    
+    
+    
     
