@@ -74,4 +74,22 @@ def read_csv(path, limit=None):
 #    첫 번째 줄: {'customer_id': 'C001', 'name': '전기태', 'gender': 'M', 'age': '74', 'phone': '010-4949-1773', 'email': 'sungmin70@example.com', 'city': '동대문구', 'city_dong': '전농제1동', 'work_city': '영등포구', 'work_dong': '영등포동', 'joined_at': '2024-03-30'}
 #    '''
     
+def count_rows(path):
+    """줄 수만 센다. 줄을 저장하지 않으므로 파일이 커도 메모리를 안 먹는다.
+ 
+    주의: 파일의 '줄바꿈 개수'를 세면 안 된다.
+    페르소나 서술문처럼 따옴표 안에 줄바꿈이 들어있는 칸이 있어서,
+    실제 데이터 한 줄이 파일에서는 여러 줄일 수 있다.
+    그래서 csv 로 제대로 해석하면서 세야 정확하다.
+    """
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        return sum(1 for _ in reader)
 
+
+#if __name__ == "__main__":
+#    path = DATA_DIR / "customers_v2.csv"
+#    print(count_rows(path))   # 100 나와야 함 -> 나옴!
+
+def human_size(num_bytes):
+    
