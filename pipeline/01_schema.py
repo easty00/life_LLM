@@ -8,6 +8,7 @@
 지금은 [1단계] 확인 까지만 들어 있다.
 """
 
+import re
 import csv
 import sys
 from pathlib import Path
@@ -157,7 +158,7 @@ def preview(path, limit=SAMPLE_SIZE, count_all=True):
 ########
 ### 2단계 : 실행
 ########
-
+"""
 if __name__ == "__main__":
     paths = sorted(DATA_DIR.glob("*.csv"))
     
@@ -173,140 +174,180 @@ if __name__ == "__main__":
         # 100MB 가 넘는 파일은 줄 세기를 건너뛴다 (시간이 오래 걸린다)
         big = path.stat().st_size > 100 * 1024 * 1024
         preview(path, count_all=not big)
-
-''' 실행결과(열면 긺 주의)
-[확인] C:\Users\lecra\Desktop\LifeFitDB\data 안의 csv 4개
+"""
 
 
-⏳ [customers_v2.csv] 파일을 확인하는 중...
-✅ 10.8 KB · 100행 · 11칸
+# ------------------------------------------------------------------------------
 
-    💬 customer_id                  C001
-    💬 name                         전기태
-    💬 gender                       M
-    💬 age                          74
-    💬 phone                        010-4949-1773
-    💬 email                        sungmin70@example.com
-    💬 city                         동대문구
-    💬 city_dong                    전농제1동
-    💬 work_city                    영등포구
-    💬 work_dong                    영등포동
-    💬 joined_at                    2024-03-30
+"""
+뭘 하는 건가
 
-⏳ [master_dataset_v3.csv] 파일을 확인하는 중...
-✅ 210.4 KB · 427행 · 62칸
+CSV는 전부 글자예요. "46"도 글자고 "홍성민"도 글자죠. 그런데 DB에 넣을 땐 age INTEGER, name TEXT처럼 타입을 정해야 해요. 값들을 보고 타입을 알아맞히는 게 이 단계예요.
 
-    💬 시도_명칭                        서울
-    💬 구                            종로구
-    💬 행정동명                         청운효자동
-    💬 행정동ID_8자리                    11010720
-    💬 hnet_code                    11110515
-    💬 면적_m2                        2570477.37785328
-    💬 면적_km2                       2.57047737785328
-    💬 CCTV_수                       165.0
-    💬 버스정류장_수                      29.0
-    💬 의료기관_수                       8.0
-    💬 학교_수                         138.0
-    💬 학원_수                         15.0
-    💬 쓰레기통_수                       14.0
-    💬 건물_수                         2246.0
-    💬 공원_수                         2.0
-    💬 대형점포_수                       1.0
-    💬 경찰관서_수                       2.0
-    💬 소방관서_수                       1.0
-    💬 지하철역_수                       0.0
-    💬 점포_수                         10950.0
-    💬 범죄발생_구                       2981
-    💬 소음민원_구                       2200
-    💬 CCTV설치_구                     1872
-    💬 녹지면적_구                       228451
-    💬 학교녹지면적_구                     17469
-    💬 재해위험지구_구                     2
-    💬 소음_주간_구                      62.2875
-    💬 소음_야간_구                      56.85
-    💬 초미세먼지_구                      19.60666666666667
-    💬 CCTV_밀도                      64.19041125263621
-    💬 버스정류장_밀도                     11.281951068645151
-    💬 의료기관_밀도                      3.1122623637641795
-    💬 학교_밀도                        53.6865257749321
-    💬 학원_밀도                        5.8354919320578365
-    💬 쓰레기통_밀도                      5.446459136587315
-    💬 건물_밀도                        873.7676586267935
-    💬 공원_밀도                        0.7780655909410449
-    💬 대형점포_밀도                      0.3890327954705224
-    💬 경찰관서_밀도                      0.7780655909410449
-    💬 소방관서_밀도                      0.3890327954705224
-    💬 지하철역_밀도                      0.0
-    💬 점포_밀도                        4259.909110402221
-    💬 문화시설_수                       14
-    💬 공연시설_수                       3
-    💬 기타문화_수                       5
-    💬 도서관_수                        2
-    💬 전시시설_수                       4
-    💬 무료문화시설_수                     12
-    💬 문화시설_밀도                      5.45
-    💬 공연시설_밀도                      1.17
-    💬 기타문화_밀도                      1.95
-    💬 도서관_밀도                       0.78
-    💬 전시시설_밀도                      1.56
-    💬 무료문화시설_밀도                    4.67
-    💬 총전입                          1017
-    💬 총전출                          1314
-    💬 순이동                          -297
-    💬 전입률_퍼센트                      21.01
-    💬 전출률_퍼센트                      27.15
-    💬 이동률_퍼센트                      48.16
-    💬 순이동률_퍼센트                     -6.14
-    💬 거주안정성_점수                     71.7
+수업 코드를 그대로 쓰되, 두 개만 손봐야 해요
 
-⏳ [nemotron.csv] 파일을 확인하는 중...
-✅ 438.4 MB · 행수 미확인 · 26칸
+수업에서 만드신 looks_int, looks_float, looks_date, infer_type 네 개는 그대로 가져오시면 돼요. 다만 우리 데이터에서 걸리는 게 둘 있어요.
 
-    💬 uuid                         03b4f36a18e6469386d0286dddd513c8
-    💬 professional_persona         전기태 씨는 광주 서구의 하역 현장에서 수십 년간 짐을 쌓아 올리며, 지렛대 원리를 이용해 무거운 자재를 효 ...
-    💬 sports_persona               전기태 씨는 주말마다 무등산 자락을 느릿느릿 걸으며 땀을 흘리고, 내려오는 길에 단골 목욕탕에서 친구들과 엉 ...
-    💬 arts_persona                 전기태 씨는 거실 소파에 깊숙이 파묻혀 텔레비전에서 나오는 옛날 가요 프로그램을 보며 젊은 시절의 추억에 젖 ...
-    💬 travel_persona               전기태 씨는 아내와 함께 전국의 역사 유적지를 찾아다니며 옛 조상들의 발취를 느끼는 여행을 즐깁니다. 화려한 ...
-    💬 culinary_persona             전기태 씨는 일주일에 한 번 배달 짜장면과 탕수육을 시켜 먹는 날을 손꼽아 기다리며, 2주에 한 번은 아내와 ...
-    💬 family_persona               전기태 씨는 전·월세 아파트에서 평생의 동반자인 아내와 단출하게 살아가며, 투박한 전라도 사투리로 서로를 챙 ...
-    💬 persona                      전기태 씨는 광주 서구에서 평생 하역 일을 하며 살아온 70대 가장으로, 투박한 손마디에 삶의 흔적이 배어  ...
-    💬 cultural_background          광주 서구에서 평생을 보내며 투박하지만 정겨운 전라도 사투리가 몸에 배어 있고, 시장통 사람들과 어울려 왁자 ...
-    💬 skills_and_expertise         수십 년간 하역 현장에서 다져진 감각으로 짐의 무게 중심을 한눈에 파악해 가장 효율적으로 쌓아 올리는 요령이 ...
-    💬 skills_and_expertise_list    ['적재물 무게 중심 파악 및 효율적 배치', '현장 자재 결속 및 고정 기술', '하역 작업 동선 최적화' ...
-    💬 hobbies_and_interests        주말이면 무등산 자락을 천천히 걸으며 땀을 빼고, 내려오는 길에 단골 목욕탕에서 뜨거운 물에 몸을 담그며 동 ...
-    💬 hobbies_and_interests_list   ['무등산 둘레길 산책', '동네 대중사우나 이용', '전통시장 맛집 탐방', '트로트 프로그램 시청', ' ...
-    💬 career_goals_and_ambitions   큰 욕심 없이 지금처럼 매일 아침 정해진 시간에 출근해 땀 흘려 일하며 건강을 유지하는 것에 만족합니다. 무 ...
-    💬 sex                          남자
-    💬 age                          74
-    💬 marital_status               배우자있음
-    💬 military_status              비현역
-    💬 family_type                  배우자와 거주
-    💬 housing_type                 아파트
-    💬 education_level              초등학교
-    💬 bachelors_field              해당없음
-    💬 occupation                   하역 및 적재 관련 단순 종사원
-    💬 district                     광주-서구
-    💬 province                     광주
-    💬 country                      대한민국
+① 숫자처럼 생겼지만 코드인 것
+행정동ID_8자리   11010720
+hnet_code       11110515
 
-⏳ [user_preferences.csv] 파일을 확인하는 중...
-✅ 6.5 KB · 100행 · 14칸
+이건 INTEGER로 잡혀요. 그런데 더하거나 평균 낼 값이 아니잖아요. 코드가 INTEGER가 되면 나중에 앞자리 0이 잘리는 사고도 나요.
 
-    💬 customer_id                  C001
-    💬 건물유형                         빌라
-    💬 거래형태                         월세
-    💬 금액                           52
-    💬 건축면적                         24
-    💬 층수                           옥탑
-    💬 준공년도                         최근 5년
-    💬 녹지                           2
-    💬 안전                           2
-    💬 교통                           2
-    💬 상권                           2
-    💬 의료                           1
-    💬 교육                           4
-    💬 문화                           5
-'''
+수업 코드에 이미 비슷한 처리가 있어요 — looks_int에서 전화번호(0으로 시작)를 걸러낸 그 부분이요. 같은 발상으로 이름을 보고 판단하는 규칙을 하나 추가하시면 돼요.
+
+"""
+
+# 이름에 이런 말이 들어가면 계산할 숫자가 아니라 '코드'로 본다
+CODE_HINTS = ("code", "코드", "_id", "id_", "uuid", "행정동id")
+
+def is_code_column(column):
+    lower = column.lower()
+    return any(hint in lower for hint in CODE_HINTS)
+
+# 해당 값이 정수인지 확인하는 삼수    
+def looks_int(text):
+    # 만약 음수 부호 "="이 있으면 떼서 저장
+    body = text[1:] if text.startswith("-") else text
+    # 0~9 가 아닌 글자가 섞인 경우
+    if not body.isdigit():
+        return False # 정수가 아님
+    # 만약 정수일 때 앞자리가 0으로 시작하면 전화번호 (조건 2자리 이상일때)
+    #print("전화번호임")
+    return not (len(body) > 1 and body.startswith("0"))
+
+# 소수 판별 함수
+def looks_float(text):
+    # float 실수 반환되는지 우선 확인.
+    try:
+        float(text)
+        
+    # 위의 모든 경우가 아니면 실수가 아닌게 확실하니 False반환
+    except ValueError:
+        return False
+    
+    # 전달된 값에 "."이 없으면 실수 일리가 없으니확실히 false 반환
+    if "." not in text:
+        return False
+         
+    # 위의 모든 예외사항 통과하면 얘는 무조건 실수
+    return True
+
+# 날짜 판별 함수
+def looks_date(text):
+    # 정규표현식 \d(숫자)
+    # \d{갯수} (숫자가 저 갯수만큼 일때)
+    # fullmatch (검증할 정규표현식, 검사할 문자값)
+    return re.fullmatch(r"\d{4}-\d{2}-\d{2}",text) is not None #무조건 한글자 검색. 
+
+# 타입 추론 함수 생성
+def infer_type(values):
+    # 전달된 값에서 빈칸을 제외한 값을 변수에 담음
+    seen = [v for v in values if v != ""]
+    
+    if not seen :
+        return "TEXT"
+    
+    if all (looks_int(v) for v in seen):
+        return "INTEGER"
+
+    if all (looks_float(v) for v in seen):
+            return "FLOAT"
+    
+    if all (looks_date(v) for v in seen):
+            return "DATE"
+    
+    return "TEXT"
+
+
+def describe(path, limit=SAMPLE_SIZE):
+    """파일 하나의 칸별 타입을 출력한다."""
+    columns, rows = read_csv(path, limit=limit)
+    
+    print(f"⏳ [{path.stem}] 타입을 추론하는 중...")
+    
+    for column in columns:
+        values = [r[column] for r in rows]
+        kind = "TEXT" if is_code_column(column) else infer_type(values)
+        print(f"   💬 {column:28s} {kind}")
+
+    print()
+
+# 확인
+"""
+if __name__ == "__main__":
+    path = DATA_DIR / "master_dataset_v3.csv"
+    describe(path)
+"""
+
+"""
+⏳ [master_dataset_v3] 타입을 추론하는 중...
+   💬 시도_명칭                        TEXT
+   💬 구                            TEXT
+   💬 행정동명                         TEXT
+   💬 행정동ID_8자리                    TEXT
+   💬 hnet_code                    TEXT
+   💬 면적_m2                        FLOAT
+   💬 면적_km2                       FLOAT
+   💬 CCTV_수                       FLOAT
+   💬 버스정류장_수                      FLOAT
+   💬 의료기관_수                       FLOAT
+   💬 학교_수                         FLOAT
+   💬 학원_수                         FLOAT
+   💬 쓰레기통_수                       FLOAT
+   💬 건물_수                         FLOAT
+   💬 공원_수                         FLOAT
+   💬 대형점포_수                       FLOAT
+   💬 경찰관서_수                       FLOAT
+   💬 소방관서_수                       FLOAT
+   💬 지하철역_수                       FLOAT
+   💬 점포_수                         FLOAT
+   💬 범죄발생_구                       INTEGER
+   💬 소음민원_구                       INTEGER
+   💬 CCTV설치_구                     INTEGER
+   💬 녹지면적_구                       INTEGER
+   💬 학교녹지면적_구                     INTEGER
+   💬 재해위험지구_구                     INTEGER
+   💬 소음_주간_구                      FLOAT
+   💬 소음_야간_구                      FLOAT
+   💬 초미세먼지_구                      FLOAT
+   💬 CCTV_밀도                      FLOAT
+   💬 버스정류장_밀도                     FLOAT
+   💬 의료기관_밀도                      FLOAT
+   💬 학교_밀도                        FLOAT
+   💬 학원_밀도                        FLOAT
+   💬 쓰레기통_밀도                      FLOAT
+   💬 건물_밀도                        FLOAT
+   💬 공원_밀도                        FLOAT
+   💬 대형점포_밀도                      FLOAT
+   💬 경찰관서_밀도                      FLOAT
+   💬 소방관서_밀도                      FLOAT
+   💬 지하철역_밀도                      FLOAT
+   💬 점포_밀도                        FLOAT
+   💬 문화시설_수                       INTEGER
+   💬 공연시설_수                       INTEGER
+   💬 기타문화_수                       INTEGER
+   💬 도서관_수                        INTEGER
+   💬 전시시설_수                       INTEGER
+   💬 무료문화시설_수                     INTEGER
+   💬 문화시설_밀도                      FLOAT
+   💬 공연시설_밀도                      FLOAT
+   💬 기타문화_밀도                      FLOAT
+   💬 도서관_밀도                       FLOAT
+   💬 전시시설_밀도                      FLOAT
+   💬 무료문화시설_밀도                    FLOAT
+   💬 총전입                          INTEGER
+   💬 총전출                          INTEGER
+   💬 순이동                          INTEGER
+   💬 전입률_퍼센트                      FLOAT
+   💬 전출률_퍼센트                      FLOAT
+   💬 이동률_퍼센트                      FLOAT
+   💬 순이동률_퍼센트                     FLOAT
+   💬 거주안정성_점수                     FLOAT  
+"""
+
+
+
 
 
 
