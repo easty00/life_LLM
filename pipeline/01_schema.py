@@ -20,9 +20,34 @@ csv.field_size_limit(10*1024*1024)
 # 타입을 살펴볼 때 읽을 줄 수. 11만 줄을 전부 읽을 필요가 없다.
 SAMPLE_SIZE = 500
 
-########
-### 1단계 : 파일 읽기
-########
+
+###============================================
+# 0. 전역 상수 설정 (수동 설정값 모음)
+###============================================
+
+# 이름에 이런 말이 들어가면 계산할 숫자가 아니라 '코드'로 본다
+CODE_HINTS = ("code", "코드", "_id", "id_", "uuid", "행정동id")
+COMPOSITE_PK_HINTS = ("구","행정동명") # 하드코딩 방지용 상수 추가
+
+
+# 별칭 적용
+TABLE_ALIAS = {
+    "customers_v2": "customers",
+}
+
+# 매칭되지 않는 파일들 키 정리
+# customers의 city, city_dong 두 칸이 → master_dataset_v3의 구, 행정동명을 가리킴
+# 기존 fks에 합침
+MANUAL_FKS = {
+    "customers": [
+        (["city", "city_dong"], "master_dataset_v3", ["구", "행정동명"]),
+    ],
+}
+
+
+###============================================
+# 1단계 : 파일 및 데이터 읽기 함수
+###============================================
 
 def read_csv(path, limit=None):
     """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다."""
@@ -33,11 +58,14 @@ def read_csv(path, limit=None):
         
         if limit is None :
             return fieldnames, list(reader)
+        
         rows = []
+        
         for i, row in enumerate(reader):
             if i >= limit:
                 break
             rows.append(row)
+            
         return fieldnames, rows
     
     
@@ -92,9 +120,8 @@ def preview(path, limit=SAMPLE_SIZE, count_all=True):
 
 
 
-########
-### 2단계 : 실행
-########
+# 실행
+
 """
 if __name__ == "__main__":
     paths = sorted(DATA_DIR.glob("*.csv"))
@@ -114,18 +141,15 @@ if __name__ == "__main__":
 """
 
 
-# ------------------------------------------------------------------------------
-
-# 2단계
+###============================================
+# 2단계 : 타입 추론 함수
+###============================================
 
 """
 뭘 하는 건가
 
 CSV는 전부 글자예요. "46"도 글자고 "홍성민"도 글자죠. 그런데 DB에 넣을 땐 age INTEGER, name TEXT처럼 타입을 정해야 해요. 값들을 보고 타입을 알아맞히는 게 이 단계예요.
 """
-
-# 이름에 이런 말이 들어가면 계산할 숫자가 아니라 '코드'로 본다
-CODE_HINTS = ("code", "코드", "_id", "id_", "uuid", "행정동id")
 
 def is_code_column(column):
     lower = column.lower()
@@ -185,6 +209,12 @@ def infer_type(values):
     
     return "TEXT"
 
+def column_type(column, rows) :
+    """칸 하나의 타입을 정한다. 코드성 칸은 무조건 TEXT."""
+    if is_code_column(column):
+        return "TEXT"
+    return infer_type([r[column] for r in rows])
+
 
 def describe(path, limit=SAMPLE_SIZE):
     """파일 하나의 칸별 타입을 출력한다."""
@@ -194,15 +224,16 @@ def describe(path, limit=SAMPLE_SIZE):
     
     for column in columns:
         values = [r[column] for r in rows]
-        kind = "TEXT" if is_code_column(column) else infer_type(values)
+        kind = column_type(column, rows)
         print(f"   💬 {column:28s} {kind}")
 
     print()
 
 
-# ------------------------------------------------------------------------------
 
-# 3단계 : PK 찾기
+###============================================
+# 3단계 : 키(PK/FK) 추론 함수
+###============================================
 
 
 # PK를 찾아주는 함수
@@ -223,7 +254,7 @@ def infer_pk(columns, rows):
             return [col]    # 리스트로 통일 (2)번과 형태 맞추려고)
     
     # 2) 칸 하나로 안 되면, 코드 컬럼 두 개씩 짝지어 시도한다
-    code_cols = [c for c in columns if is_code_column(c) or c in ("구", "행정동명")]
+    code_cols = [c for c in columns if is_code_column(c) or c in (COMPOSITE_PK_HINTS)]
 
     for i in range(len(code_cols)):
         for j in range(i + 1, len(code_cols)):
@@ -237,17 +268,17 @@ def infer_pk(columns, rows):
 
 
 # 복합키(master_dataset_v3.csv)
-columns, rows = read_csv(DATA_DIR / "master_dataset_v3.csv", limit=500)
-
-gu_values = [r["구"] for r in rows]
-dong_values = [r["행정동명"] for r in rows]
-
+# columns, rows = read_csv(DATA_DIR / "master_dataset_v3.csv", limit=500)
+#
+# gu_values = [r["구"] for r in rows]
+# dong_values = [r["행정동명"] for r in rows]
+#
 #print("구 종류 수:", len(set(gu_values)))          # 25개뿐 -> 중복 많음
 #print("행정동명 종류 수:", len(set(dong_values)))   # 427개 나와야 하는데 1개 부족
 
 
 # 구+동 조합 확인
-combo = [r["구"] + "|" + r["행정동명"] for r in rows]
+#combo = [r["구"] + "|" + r["행정동명"] for r in rows]
 
 #print("합친 값 종류 수:", len(set(combo)))
 #print("전체 행 수:", len(rows))             # 둘 다 427개로 일치
@@ -256,41 +287,9 @@ combo = [r["구"] + "|" + r["행정동명"] for r in rows]
 # 안전한 PK를 만들기 위한 함수 추가 (infer_pk에 2) 추가함)
 
 
-# ------------------------------------------------------------------------------
-
-# 4단계 : 사전 확인
-
-"""
-01_schema.py
-├── read_csv        CSV 읽기 (BOM 처리, limit)
-├── count_rows      줄 수 세기 (메모리 안 먹음)
-├── human_size       바이트 → 사람이 읽기 좋은 크기
-├── preview          파일 하나 요약 출력
-├── is_code_column   코드성 칸 판별
-├── looks_int/float/date   값 하나가 무슨 타입인지
-├── infer_type       칸 전체를 보고 타입 결정
-├── describe         파일 하나의 칸별 타입 출력
-└── infer_pk         PK 찾기 (단일키 + 복합키)
-
-이제 각 CSV의 PK가 뭔지, 칸 타입이 뭔지까지 자동으로 잡을 수 있게 됐어요.
-남은 건 owner_of(PK의 주인 표 찾기)랑 그걸로 FK 연결하는 부분이에요. 이게 되면:
-
-customers.customer_id  ←  user_preferences.customer_id  (FK)
-customers.customer_id  ←  nemotron.customer_id            (FK)
-
-이런 관계가 자동으로 잡혀서, 나중에 CREATE TABLE에 FOREIGN KEY를 자동 생성할 수 있는 재료가 돼요.
-"""
-
-# 별칭 적용
-TABLE_ALIAS = {
-    "customers_v2": "customers",
-}
-
 def table_name(path):
     stem = path.stem
     return TABLE_ALIAS.get(stem, stem)
-
-tables = ["customers", "user_preferences", "nemotron", "master_dataset_v3"]
 
 def owner_of(column, tables):
     stem = column[:-3]     # 'customer_id' -> 'customer'
@@ -300,16 +299,9 @@ def owner_of(column, tables):
     return None
 
 
-# 제대로 적용되는지 확인
-if __name__ == "__main__":
-    tables = ["customers", "user_preferences", "nemotron", "master_dataset_v3"]
-    print(owner_of("customer_id", tables))   # 'customers' 나와야 함
-    print(owner_of("region_id", tables))     # None 나와야 함 (그런 표 없음)
-
-
-# ------------------------------------------------------------------------------
-
-# 5단계 : tables 딕셔너리로 전부 묶기
+###============================================
+# 4단계 : 딕셔너리 만들기
+###============================================
 
 
 # 1. 모든 테이블별 필드, 데이터타입, PK 구하기
@@ -320,14 +312,14 @@ for path in sorted(DATA_DIR.glob("*.csv")):
     tables[name] = {
         "columns" : columns,
         "rows" : rows,
-        "type" : {col: ("TEXT" if is_code_column(col) else infer_type([r[col] for r in rows])) for col in columns},
+        "type" : {col: column_type(col, rows) for col in columns},
         "pk" : infer_pk(columns, rows)
     }
 
 
-# ------------------------------------------------------------------------------
-
-# 6단계 : FK(외래키) 찾기
+###============================================
+# 5단계 : FK(외래키) 찾기
+###============================================
 
 
 # 2. 특정 테이블에 연결되어 있는 외래키 찾기
@@ -355,17 +347,55 @@ for name, table in tables.items(): # 표 이름과 내용을 그룹으로 꺼냄
         fks.append((col, owner))
         
     table["fks"] = fks
+    table["manual_fks"] = MANUAL_FKS.get(name,[]) # 자동 매칭 되지 않는 키값 추가
         
-    print(fks)
+    #print(fks)
     
 
 # 원인 찾기
 # print(tables["nemotron"]["columns"])
 # 검색결과 대응하는 FK가 없음
 
-print(DATA_DIR)
-print(DB_PATH)
+#print(DATA_DIR)
+#print(DB_PATH)
 
+
+###============================================
+# 6단계 : SQL 생성 로직
+###============================================
+
+
+def build_create(name, table) :
+    lines = []
+    pk = table["pk"] or []      # pk 가 None 일 수도 있으니 빈 목록으로
+                                # infer_pk가 못 찾아서 None을 돌려준 경우를 대비    
+    for col in table["columns"] :
+        piece = f"    {col} {table['type'][col]}"
+        
+        # 칸이 하나뿐인 PK 만 여기서 붙인다
+        if len(pk) == 1 and col == pk[0] :
+            piece += " PRIMARY KEY"
+        
+        lines.append(piece)
+    
+    # 칸이 둘 이상인 PK(복합키)는 맨 아래 따로 적는다
+    if len(pk) > 1:
+        joined = ", ".join(pk)
+        lines.append(f"    PRIMARY KEY ({joined})")
+    
+    for col, owner in table["fks"] :
+        lines.append(f"    FOREIGN KEY ({col}) REFERENCES {owner}({col})")
+    
+    for cols, owner, owner_cols in table.get("manual_fks", []):
+        mine = ", ".join(cols)
+        theirs = ", ".join(owner_cols)
+        lines.append(f"    FOREIGN KEY ({mine}) REFERENCES {owner}({theirs})")  
+    
+    return f"CREATE TABLE {name} (\n" + ",\n".join(lines) + "\n)"
+
+if __name__ == "__main__":
+    for name, table in tables.items():
+        print(build_create(name, table) + ";\n")
 
 
 
