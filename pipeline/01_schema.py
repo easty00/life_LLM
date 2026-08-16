@@ -267,23 +267,6 @@ def infer_pk(columns, rows):
     return None
 
 
-# 복합키(master_dataset_v3.csv)
-# columns, rows = read_csv(DATA_DIR / "master_dataset_v3.csv", limit=500)
-#
-# gu_values = [r["구"] for r in rows]
-# dong_values = [r["행정동명"] for r in rows]
-#
-#print("구 종류 수:", len(set(gu_values)))          # 25개뿐 -> 중복 많음
-#print("행정동명 종류 수:", len(set(dong_values)))   # 427개 나와야 하는데 1개 부족
-
-
-# 구+동 조합 확인
-#combo = [r["구"] + "|" + r["행정동명"] for r in rows]
-
-#print("합친 값 종류 수:", len(set(combo)))
-#print("전체 행 수:", len(rows))             # 둘 다 427개로 일치
-
-
 # 안전한 PK를 만들기 위한 함수 추가 (infer_pk에 2) 추가함)
 
 
@@ -393,10 +376,53 @@ def build_create(name, table) :
     
     return f"CREATE TABLE {name} (\n" + ",\n".join(lines) + "\n)"
 
-if __name__ == "__main__":
-    for name, table in tables.items():
-        print(build_create(name, table) + ";\n")
+#if __name__ == "__main__":
+#    for name, table in tables.items():
+#        print(build_create(name, table) + ";\n")
 
+
+# 테이블 생성 순서 지정을 위한 함수
+    """
+    user_preferences는 customers를 참조해요. 
+    그런데 customers 표가 아직 없는 상태에서 user_preferences를 만들려고 하면, 
+    SQLite가 "참조할 표가 없다"고 에러를 내요. 
+    그래서 참조당하는 표를 먼저 만들어야 해요.
+    """
+
+def sort_by_dependency(tables):
+    done = set()        # scan이 아니로 search로 리스트에 특정 정보의 존재유무를 빠르게 파악하기 위함
+    order = []          # 실제 어떤 정보값들을 차례대로 담기 위함
+    
+    # 테이블생성 sql문이 실행될 순서의 리스트가 다 담길때까지 무한 반복
+    while len(order) < len(tables) :
+        moved = False
+        
+        #각 csv파일 정보를 반복
+        for name, table in tables.items() :
+            if name in done:
+                continue
+            
+            # 자동으로 찾은 FK 가 가리키는 표들이 전부 준비됐나
+            auto_ready = all(owner in done for _, owner in table["fks"])
+            
+            # 손으로 적어둔 FK 가 가리키는 표들도 전부 준비됐나
+            manual_ready = all(owner in done for _, owner, _ in table.get("manual_fks", []))
+            
+            # 이 표가 참조하는 표들이 전부 이미 만들어졌는가
+            if auto_ready and manual_ready:
+                order.append(name)
+                done.add(name)
+                moved = True
+            
+        # 참조당하는 테이블이 모두 order에 담기면 moved값이 False로 바뀌며 
+        # 아래구문이 실행되며 나머지 참조하는 테이블 순서가 모두 이후에 담기게 됨
+        if not moved :
+            order += [n for n in tables if n not in done]
+            break
+        
+    return order    
+
+print(sort_by_dependency(tables))
 
 
 
