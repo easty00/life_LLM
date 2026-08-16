@@ -1,3 +1,5 @@
 ﻿data/nemotron.csv
 *.db
 __pycache__/
+data/seoul_persona_full.csv.gz
+data/kb_persona.csv
