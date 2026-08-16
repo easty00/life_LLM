@@ -422,7 +422,88 @@ def sort_by_dependency(tables):
         
     return order    
 
-print(sort_by_dependency(tables))
 
+def convert(value,kind) :
+    """CSV 의 글자를 DB 에 넣을 값으로 바꾼다."""
+    if value == "" :
+        return None         # 빈 칸은 NULL 로
+    
+    try:
+        if kind == "INTEGER" :
+            return int(value)
+    
+        if kind == "FLOAT":
+            return float(value)
+    
+    except ValueError:
+        return value
+    
+    return value            # TEXT, DATE 는 글자 그대로. SQLite에 날짜타입 없음
 
+# ① DB 있으면 물어보고 → 지우기
+# ② 연결하고 FK 검사 켜기
+# ③ 순서대로 CREATE TABLE
+# ④ 데이터 넣기 (INSERT)
+# ⑤ FK 칸에 색인 만들기
 
+if __name__ == "__main__" :
+    # 1. 기존 DB 확인
+    if DB_PATH.exists():
+        answer = input(f"{DB_PATH.name}가 이미 존재합니다! 다시 만들까요? (y/n) ")
+        if answer.lower() != "y" :
+            print("중단합니다!")
+            sys.exit(0)
+        DB_PATH.unlink()
+    
+    # 2. 연결. PRAGMA 는 SQLite 설정을 켜고 끄는 명령이다.
+    #    foreign_keys 는 기본이 꺼짐. 켜야 FK 제약을 실제로 검사한다
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("PRAGMA foreign_keys = ON")
+    
+    order = sort_by_dependency(tables)
+    print(f"⏳ 표 만드는 순서: {order}")
+    
+    # 3. 표 만들기
+    for name in order:
+        cur.execute(build_create(name,tables[name]))
+        print(f"✅ {name} 표 생성")
+    
+    # 4. 데이터 넣기
+    for name in order:
+        table = tables[name]
+        columns = table["columns"]
+        
+        # INSERT INTO customers (customer_id, name, ...) VALUES (?, ?, ...)
+        # ? 자리에 값이 하나씩 들어간다. 값을 직접 문자열로 붙이면
+        # 따옴표가 섞인 데이터에서 SQL 이 깨지므로 이 방식을 쓴다
+        marks = ", ".join("?" * len(columns))
+        col_list = ", ".join(columns)
+        sql = f"INSERT INTO {name} ({col_list}) VALUES ({marks})"
+        
+        values = [
+            tuple(convert(row[col], table["type"][col]) for col in columns)
+            for row in table["rows"]
+        ]
+        
+        cur.executemany(sql, values)
+        print(f"✅ {name:20s} {len(values):6,d}줄 적재")
+    
+    # 5. FK 칸에 색인. 조인할 때 훨씬 빨라진다
+    for name, table in tables.items():
+        for col, _ in table["fks"]:
+            cur.execute(f"CREATE INDEX idx_{name}_{col} ON {name}({col})")
+    
+    con.commit()
+    con.close()
+    print(f"\n✅ {DB_PATH} 생성 완료")
+    
+    con = sqlite3.connect(DB_PATH)
+
+    cur = con.cursor()
+    cur.execute("PRAGMA foreign_keys = ON")
+
+    # FK 위반이 있는지 검사한다. 아무것도 안 나오면 정상
+    for r in cur.execute("PRAGMA foreign_key_check").fetchall():
+        print(r)
+    print("검사 끝")
