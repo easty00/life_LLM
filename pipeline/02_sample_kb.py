@@ -62,8 +62,39 @@ def sample_by_district(path, per_district = PER_DISTRICT, seed = SEED) :
     
     return picked
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
+#    picked = sample_by_district(SOURCE)
+#    print()
+#    print(f"✅ 표본 {len(picked):,}명")
+
+def save_csv(rows, path):
+    """뽑은 표본을 CSV 로 저장한다."""
+    if not rows:
+        print("[중단] 저장할 줄이 없어요!")
+        return
+    
+    columns = list(rows[0].keys())
+    
+    # newline="" 이 없으면 윈도우에서 줄 사이에 빈 줄이 하나씩 들어간다
+    with open(path, "w", encoding="utf-8-sig", newline="") as f :
+        writer = csv.DictWriter(f, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+    
+    size = path.stat().st_size / 1024 / 1024
+    print(f"✅ {path.name} 저장 · {len(rows):,}줄 · {size:.1f} MB")
+
+if __name__ == "__main__" :
     picked = sample_by_district(SOURCE)
     print()
     print(f"✅ 표본 {len(picked):,}명")
-    
+    print()
+    save_csv(picked, OUTPUT)
+
+
+
+
+
+
+
+
