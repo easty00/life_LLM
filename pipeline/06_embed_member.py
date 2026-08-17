@@ -82,4 +82,105 @@ def load_members(path, count=MEMBER_COUNT) :
     return rows
 
 
+#if __name__ == "__main__":
+    members = load_members(SOURCE)
 
+    # 첫 사람이 제대로 붙었는지 확인
+    print(f"   💬 {members[0]['customer_id']}  {members[0]['persona'][:50]}...")
+    print(f"   💬 {members[-1]['customer_id']}  {members[-1]['persona'][:50]}...")
+
+
+def make_chunks(rows):
+    """회원 한 명을 칸별 청크로 쪼갠다. 03번과 같은 방식."""
+    chunks = []
+    
+    for row in rows :
+        for column in CHUNK_COLUMNS:
+            text = (row.get(column) or "").strip()
+            
+            if len(text) < MIN_LENGTH:
+                continue
+            
+            chunks.append({
+                "customer_id" : row["customer_id"],
+                "category" : column,        # 어느 칸에서 나왔는지
+                "text" : text,
+            })
+    
+    return chunks
+
+def create_table(cur) :
+    """회원 청크와 벡터를 담을 표"""
+    
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS member_chunk (
+            chunk_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id TEXT,
+            district    TEXT,
+            category    TEXT,
+            text        TEXT,
+            vector      TEXT
+        )
+    """)
+
+
+def to_passage(text):
+    return f"passage: {text}"
+
+
+def embed_and_store(cur, chunks, model) :
+    """청크를 벡터로 바꿔 DB 에 넣는다. 4번과 같음"""
+
+    docs = [to_passage(c["text"]) for c in chunks]
+    
+    print(f"⏳ {len(docs):,}개 청크를 벡터로 바꾸는 중...")
+    started = time.time()
+
+    vectors = model.encode(
+        docs,
+        normalize_embeddings = True,
+        batch_size = 32,
+        show_progress_bar = True,
+    )
+    
+    print(f"✅ 완료 ({time.time() - started:.0f}초)")
+    
+    values = [
+        (c["customer_id"], c["category"], c["text"],
+         json.dumps(vec.tolist()))
+        for c, vec in zip(chunks, vectors)
+    ]
+    
+    cur.executemany(
+        "INSERT INTO member_chunk (customer_id, category, text, vector) "
+        "VALUES (?, ?, ?, ?)",
+        values,
+    )
+
+
+# 실행부
+
+if __name__ == "__main__":
+    members = load_members(SOURCE)
+    chunks = make_chunks(members)
+    print(f"✅ 청크 {len(chunks)}개")
+
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+
+    create_table(cur)
+
+    done = cur.execute("SELECT COUNT(*) FROM member_chunk").fetchone()[0]
+    if done > 0:
+        cur.execute("DELETE FROM member_chunk")
+        print(f"   기존 {done}줄 지움")
+
+    model = SentenceTransformer(MODEL_NAME)
+    embed_and_store(cur, chunks, model)
+
+    con.commit()
+
+    n = cur.execute("SELECT COUNT(*) FROM member_chunk").fetchone()[0]
+    print(f"✅ 저장된 줄: {n}")
+
+    con.close()
