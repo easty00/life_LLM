@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.config import DATA_DIR
 
-with open(DATA_DIR / "user_preferences_v2.csv", encoding="utf-8-sig") as f:
+with open(DATA_DIR / "user_preferences_v4.csv", encoding="utf-8-sig") as f:
     rows = list(csv.DictReader(f))
 
 print(f"줄 수: {len(rows)}")

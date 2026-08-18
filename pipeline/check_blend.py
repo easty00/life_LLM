@@ -24,6 +24,8 @@ QUERIES = [
     ("산책 좋아하고 조용한 데", "녹지"),      # 이 검색어라면 이 지표가 달라야 한다
     ("맛집 탐방이 취미예요", "상권"),
     ("애들 학원 보내기 좋은 곳", "교육"),
+    ("초등학생 아이를 키우고 있어요", "교육"),      # ← 추가
+    ("아이 교육에 관심이 많아요", "교육"),          # ← 추가
     ("병원 가까운 게 중요해요", "의료"),
 ]
 
@@ -43,7 +45,7 @@ def load_all(cur):
     # 새 CSV에서 읽기
     import csv
     prefs = {}
-    with open(DATA_DIR / "user_preferences_v2.csv", encoding="utf-8-sig") as f:
+    with open(DATA_DIR / "user_preferences_v3.csv", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             prefs[row["customer_id"]] = {k: int(row[k]) for k in INDICATORS}
 
@@ -94,6 +96,23 @@ if __name__ == "__main__":
         print(f"검색어: {query}")
         print(f"   [{indicator}] 유사 5명 평균 {sim_avg:.2f} · 무작위 평균 {rand_mean:.2f}±{rand_std:.2f}")
         print(f"   z = {z:+.2f} · 무작위가 이보다 높을 확률 {pct:.0f}%")
-        print()
+        print()    
+
+    for query, indicator in QUERIES:
+        ids = similar_ids(query, rows, vectors, model)
+        sim_avg = statistics.mean(prefs[c][indicator] for c in ids)
+
+        # 누가 뽑혔는지, 왜 뽑혔는지 확인
+        print(f"검색어: {query}")
+        for cid in ids:
+            # 그 사람의 어느 청크가 걸렸는지 찾기
+            best_text = ""
+            best_score = -1
+            q = model.encode([f"query: {query}"], normalize_embeddings=True)[0]
+            for (c, cat, text, _), s in zip(rows, vectors @ q):
+                if c == cid and s > best_score:
+                    best_score, best_text, best_cat = float(s), text, cat
+            print(f"   {cid} [{indicator} {prefs[cid][indicator]}점] ({best_cat}) {best_text[:60]}...")
 
     con.close()
+    
