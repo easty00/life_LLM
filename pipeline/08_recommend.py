@@ -92,25 +92,25 @@ def build_relative(scores):
     return {k: scores[k] - region_mean for k in keys}
 
 
-def recommend(names, scores, relative, weights, top_k=5, mix=0.5) :
-    """절대점수와 상대점수(특기)를 섞어 순위를 매긴다.
+def recommend(names, scores, relative, weights, top_k=5, mix=0.5, sharpen=6):
+    """가중치 차이를 증폭해서 중시 지표가 순위를 주도하게 한다.
 
-    mix=0.5 면 절반씩.
-    - 절대점수만 쓰면: 골고루 높은 동네가 항상 이김
-    - 상대점수만 쓰면: 낙후됐지만 한 지표만 덜 낙후된 동네가 뽑힘
-    섞으면 "수준도 되고 특기도 맞는" 동네가 올라온다.
+    가중치 4.4 vs 3.0 은 비율로 1.5배뿐이라, 7개를 다 더하면
+    중시 지표가 전체의 20% 밖에 안 된다. 순위를 못 바꾼다.
+    그래서 평균(3.0)에서 벗어난 만큼을 지수로 증폭한다.
     """
-    total_weight = sum(weights.values())
-    
+    # 평균 대비 편차를 지수로 키운다. 4.4 -> 크게, 2.6 -> 아주 작게
+    mean_w = sum(weights.values()) / len(weights)
+    amp = {k: (w / mean_w) ** sharpen for k, w in weights.items()}
+
+    total_weight = sum(amp.values())
     total = np.zeros(len(names))
-    for k, w in weights.items():
+    for k, w in amp.items():
         combined = scores[k] * mix + (relative[k] + 50) * (1 - mix)
         total += combined * w
     total /= total_weight
-    
-    # 점수 높은 순으로 상위 top_k 개의 위치를 뽑는다
+
     top = total.argsort()[::-1][:top_k]
-    
     return [(names[i], float(total[i])) for i in top]
 
 
@@ -135,12 +135,15 @@ if __name__ == "__main__" :
     
     # 07번에서 나왔던 실제 가중치로 시험해본다
     tests = {
-        "산책 좋아하고 조용한 데":
-            {"녹지": 4.3, "안전": 3.6, "교통": 2.8, "상권": 2.5,
-             "의료": 3.2, "교육": 3.0, "문화": 2.4},
         "애들 학원 보내기 좋은 곳":
-            {"녹지": 2.8, "안전": 4.0, "교통": 3.8, "상권": 3.1,
-             "의료": 3.1, "교육": 4.6, "문화": 2.9},
+            {"녹지": 3.3, "안전": 3.1, "교통": 2.6, "상권": 3.2,
+             "의료": 3.0, "교육": 4.4, "문화": 2.6},
+        "병원이 가깝고 할머니를 모시고 살기 좋은 곳":
+            {"녹지": 3.3, "안전": 3.1, "교통": 2.8, "상권": 3.1,
+             "의료": 4.6, "교육": 2.4, "문화": 2.7},
+        "멀지 않은 거리에 백화점이 있는 곳":
+            {"녹지": 3.1, "안전": 3.2, "교통": 2.6, "상권": 4.9,
+             "의료": 3.1, "교육": 2.8, "문화": 2.9},
     }
     
     for query, weights in tests.items():
@@ -178,5 +181,11 @@ if __name__ == "__main__" :
 
     # 시험 2: Claude 초안(보정 전) 가중치로
     raw = {"녹지": 3, "안전": 4, "교통": 4, "상권": 3, "의료": 3, "교육": 5, "문화": 3}
-            
+
+    for s in [1, 3, 6, 10]:
+        print(f"--- sharpen={s} ---")
+        for name, score in recommend(names, scores, relative, weights, sharpen=s):
+            print(f"   {name:20s} {score:.1f}")
+        print()
+
     con.close()

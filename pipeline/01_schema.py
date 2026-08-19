@@ -35,6 +35,16 @@ TABLE_ALIAS = {
     "customers_v2": "customers",
 }
 
+# 파이프라인 중간 산출물·작업용 파일은 표로 만들지 않는다.
+# data/ 에 있다고 전부 DB 표가 되어야 하는 건 아니다.
+# 파일명이 자주 바뀌므로 정확한 이름 대신 접두어로 거른다
+EXCLUDE_PREFIX = (
+    "kb_",                 # 02·03번 산출물 (kb_chunk 표는 04번이 vector 칸까지 넣어 따로 만든다)
+    "member_persona",      # 다른 AI 에게 넘기려고 뽑은 파일
+    "user_preferences_v",  # 버전 보관용
+    "nemotron",            # 원본 11만 줄. 회원 100명은 06번이 CSV 를 직접 읽는다
+)
+
 # 매칭되지 않는 파일들 키 정리
 # customers의 city, city_dong 두 칸이 → master_dataset_v3의 구, 행정동명을 가리킴
 # 기존 fks에 합침
@@ -290,6 +300,8 @@ def owner_of(column, tables):
 # 1. 모든 테이블별 필드, 데이터타입, PK 구하기
 tables = {}
 for path in sorted(DATA_DIR.glob("*.csv")):
+    if path.stem.startswith(EXCLUDE_PREFIX):
+        continue
     columns, rows = read_csv(path, limit=SAMPLE_SIZE)
     name = table_name(path)     # ← path.stem 대신 이걸 써야 v2가 떨어진 이름으로 저장됨
     tables[name] = {
