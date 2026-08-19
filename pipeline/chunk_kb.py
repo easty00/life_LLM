@@ -2,12 +2,6 @@
 할 일 : 청킹   
 """
 
-import csv
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from app.config import DATA_DIR
 from app.io import read_csv, save_csv
 

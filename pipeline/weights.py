@@ -6,17 +6,12 @@
 """
 
 import json
-import sqlite3
-import sys
-import time
 import anthropic
 import numpy as np
 
-from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.config import DB_PATH, API_KEY, MODEL, EMBED_MODEL, INDICATORS
+from app.config import API_KEY, MODEL, EMBED_MODEL, INDICATORS
 from app.db import member_chunks, member_weights
 
 
@@ -61,7 +56,7 @@ CLAUDE_RATIO = 0.7
 
 
 # 함수들
-def load_member_vectors(cur):
+def load_member_vectors():
     """회원 청크 벡터를 전부 꺼낸다. numpy 배열로 만든다."""
     rows = member_chunks()
     vectors = np.array([json.loads(r["vector"]) for r in rows], dtype="float32")
@@ -129,39 +124,18 @@ def ask_claude(query):
     return weights, persona_query
 
 
-def get_member_weights(cur, customer_ids):
-    """회원들의 실제 가중치를 꺼낸다."""
-    if not customer_ids:
-        return []
-    
-    # IN (?, ?, ?) 형태를 사람 수만큼 만든다
-    marks = ", ".join("?" * len(customer_ids))
-    cols = ", ".join(INDICATORS)
-    
-    rows = cur.execute(
-        f"SELECT customer_id, {cols} FROM user_preferences "
-        f"WHERE customer_id IN ({marks})",
-        customer_ids,
-    ).fetchall()
-    
-    return [
-        {"customer_id": r[0], **dict(zip(INDICATORS, r[1:]))}
-        for r in rows
-    ]
-
-
 # 합치기
 # Claude 초안과 회원 평균을 몇 대 몇으로 섞을지: 위에 적어둠
 
-def blend(draft, member_weights):
+def blend(draft, members):
     """Claude 초안을 회원들의 실제 가중치로 보정한다."""
-    if not member_weights:
+    if not members:
         return draft        # 비슷한 회원이 없으면 초안 그대로
     
     final = {}
     for key in INDICATORS:
         # 비슷한 회원들의 평균
-        values = [m[key] for m in member_weights]
+        values = [m[key] for m in members]
         member_avg = sum(values) / len(values)
         
         mixed = draft[key] * CLAUDE_RATIO + member_avg * (1 - CLAUDE_RATIO)
@@ -171,10 +145,7 @@ def blend(draft, member_weights):
 
 
 if __name__ == "__main__":
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-
-    rows, vectors = load_member_vectors(cur)
+    rows, vectors = load_member_vectors()
     print(f"✅ 회원 청크 {len(rows)}개")
 
     model = SentenceTransformer(EMBED_MODEL)
@@ -192,14 +163,12 @@ if __name__ == "__main__":
         # 원래 검색어가 아니라 번역된 문장으로 검색한다
         similar = find_similar_members(persona_query, rows, vectors, model)
         ids = [cid for cid, _ in similar]
-        members = get_member_weights(cur, ids)
+        members = member_weights(ids)
         print(f"   [A] 유사 회원   : {ids}")
 
         final = blend(draft, members)
         print(f"   [최종] {final}")
         print()
-
-    con.close()
 
 
 

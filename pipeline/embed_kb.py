@@ -2,16 +2,12 @@
 할 일 : 청크를 벡터로 바꿔 DB 에 저장
 """
 
-import csv
 import json
 import sqlite3
 import sys
 import time
-from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
 from app.io import read_csv

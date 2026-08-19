@@ -5,14 +5,8 @@
 모든 칸을 백분위(0~100, 427개 동 중 몇 등인가)로 바꾼 뒤 가중합한다.
 """
 
-import sqlite3
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.config import DB_PATH
 from app.db import region_densities
 
 INDICATOR_COLUMNS = {

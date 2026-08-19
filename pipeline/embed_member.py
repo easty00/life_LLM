@@ -6,16 +6,11 @@ kb_chunk(지식베이스 2,500명)와 별개다.
 검색어와 비슷한 회원을 찾으면 그 사람의 가중치를 가져올 수 있다.
 """
 
-import csv
 import json
 import sqlite3
-import sys
 import time
-from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
 from app.io import read_csv

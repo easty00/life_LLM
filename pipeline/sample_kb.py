@@ -10,11 +10,7 @@
 import csv
 import gzip     # 압축 파일을 그대로 읽게 해주는 파이썬 기본 모듈
 import random
-import sys
 from collections import defaultdict
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR
 from app.io import save_csv

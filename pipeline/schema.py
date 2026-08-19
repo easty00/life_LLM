@@ -3,16 +3,13 @@ import re
 import csv
 import sys
 import sqlite3
-from pathlib import Path
 
 # 이 파일은 pipeline/ 안에 있는데 app/config.py 를 가져다 쓴다.
 # 파이썬은 "실행한 파일이 있는 폴더" 를 기준으로 모듈을 찾기 때문에,
 # 프로젝트 뿌리를 검색 경로에 직접 넣어 줘야 한다
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from app.config import DATA_DIR, DB_PATH
-from app.io import read_csv
+from app.io import read_csv, count_rows
 
 # 타입을 살펴볼 때 읽을 줄 수. 11만 줄을 전부 읽을 필요가 없다.
 SAMPLE_SIZE = 500
@@ -57,20 +54,6 @@ MANUAL_FKS = {
 ###============================================
 
     
-def count_rows(path):
-    """줄 수만 센다. 줄을 저장하지 않으므로 파일이 커도 메모리를 안 먹는다.
- 
-    주의: 파일의 '줄바꿈 개수'를 세면 안 된다.
-    페르소나 서술문처럼 따옴표 안에 줄바꿈이 들어있는 칸이 있어서,
-    실제 데이터 한 줄이 파일에서는 여러 줄일 수 있다.
-    그래서 csv 로 제대로 해석하면서 세야 정확하다.
-    """
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        return sum(1 for _ in reader)
-
-
-
 def human_size(num_bytes):
     """1234567 -> '1.2 MB' 처럼 사람이 읽기 좋게 바꾼다."""
     size = float(num_bytes)
