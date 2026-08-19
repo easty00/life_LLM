@@ -1,7 +1,5 @@
 
 import re
-import csv
-import sys
 import sqlite3
 
 # 이 파일은 pipeline/ 안에 있는데 app/config.py 를 가져다 쓴다.
@@ -194,7 +192,6 @@ def describe(path, limit=SAMPLE_SIZE):
     print(f"⏳ [{path.stem}] 타입을 추론하는 중...")
     
     for column in columns:
-        values = [r[column] for r in rows]
         kind = column_type(column, rows)
         print(f"   💬 {column:28s} {kind}")
 
@@ -355,12 +352,12 @@ def build_create(name, table) :
 
 
 # 테이블 생성 순서 지정을 위한 함수
-    """
-    user_preferences는 customers를 참조해요. 
-    그런데 customers 표가 아직 없는 상태에서 user_preferences를 만들려고 하면, 
-    SQLite가 "참조할 표가 없다"고 에러를 내요. 
-    그래서 참조당하는 표를 먼저 만들어야 해요.
-    """
+"""
+user_preferences는 customers를 참조해요. 
+그런데 customers 표가 아직 없는 상태에서 user_preferences를 만들려고 하면, 
+SQLite가 "참조할 표가 없다"고 에러를 내요. 
+그래서 참조당하는 표를 먼저 만들어야 해요.
+"""
 
 def sort_by_dependency(tables):
     done = set()        # scan이 아니로 search로 리스트에 특정 정보의 존재유무를 빠르게 파악하기 위함

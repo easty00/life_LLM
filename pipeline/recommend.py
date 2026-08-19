@@ -19,7 +19,7 @@ INDICATOR_COLUMNS = {
     "문화": ["문화시설_밀도", "도서관_밀도"],
 }
 
-def load_regions(cur):
+def load_regions():
     """427개 동의 이름과, 매핑에 쓰이는 밀도 칸들을 꺼낸다."""
     # 매핑에 등장하는 칸을 전부 모은다 (중복 없이, 순서 유지)
     cols = []
@@ -39,7 +39,7 @@ def load_regions(cur):
     
     return names, values
 
-def to_percentitle(values) :
+def to_percentile(values) :
     """숫자 묶음을 0~100 백분위로 바꾼다.
 
     "427개 동 중 몇 등인가" 를 점수로 만드는 것이다.
@@ -61,7 +61,7 @@ def build_scores(values):
     scores = {}
     
     for indicator, cols in INDICATOR_COLUMNS.items():
-        parts = [to_percentitle(values[c]) for c in cols]
+        parts = [to_percentile(values[c]) for c in cols]
         scores[indicator] = sum(parts) / len(parts)
     
     return scores
@@ -107,7 +107,7 @@ def recommend(names, scores, relative, weights, top_k=5, mix=0.5, sharpen=6):
 
 
 if __name__ == "__main__" :
-    names, values = load_regions(cur)
+    names, values = load_regions()
     scores = build_scores(values)
     relative = build_relative(scores)
     

@@ -65,7 +65,7 @@ def with_scores(result, names, scores):
         detailed.append({
             "name": name,
             "total": round(total, 1),
-            "scores": {k: round(float(scores[k],[i])) for k in INDICATORS},
+            "scores": {k: round(float(scores[k][i])) for k in INDICATORS},
         })
     
     return detailed
@@ -88,7 +88,7 @@ def find_cases(persona_query, model, top_k=3):
     
     return [
         {
-            "district": rows[i]["distfict"].replace("서울-",""),
+            "district": rows[i]["district"].replace("서울-",""),
             "category": rows[i]["category"],
             "text": rows[i]["text"][:200],
             "score": float(scores[i]),

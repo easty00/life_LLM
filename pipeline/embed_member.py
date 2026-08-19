@@ -12,28 +12,12 @@ import time
 
 from sentence_transformers import SentenceTransformer
 
-from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
+from app.config import DATA_DIR, DB_PATH, EMBED_MODEL, CHUNK_COLUMNS, MIN_LENGTH
 from app.io import read_csv
 
 MEMBER_COUNT = 100
 
 SOURCE = DATA_DIR / "nemotron.csv"
-
-# 03번과 같은 칸들. 회원도 같은 방식으로 쪼갠다
-
-CHUNK_COLUMNS = [
-    "persona",
-    "professional_persona",
-    "sports_persona",
-    "arts_persona",
-    "travel_persona",
-    "culinary_persona",
-    "family_persona",
-    "cultural_background",
-    "career_goals_and_ambitions",
-]
-
-MIN_LENGTH = 20
 
 
 # 회원 읽고 customer_id 붙이기
@@ -81,7 +65,6 @@ def create_table(cur) :
         CREATE TABLE IF NOT EXISTS member_chunk (
             chunk_id    INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id TEXT,
-            district    TEXT,
             category    TEXT,
             text        TEXT,
             vector      TEXT

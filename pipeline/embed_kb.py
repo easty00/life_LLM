@@ -51,7 +51,7 @@ def embed_and_store(cur, rows, model) :
     # e5 규칙: 저장할 문서에는 passage: 를 붙인다
     docs = [to_passage(r["text"]) for r in rows]
     
-    print(f"⏳ {len(docs):,}개 청크를 벡터로 바꾸는 중... (예상시간 20~40분)")
+    print(f"⏳ {len(docs):,}개 청크를 벡터로 바꾸는 중... (2만2천 개 기준 약 5분)")
     started = time.time()
     
     # normalize_embeddings=True 는 벡터 길이를 1로 맞춘다.

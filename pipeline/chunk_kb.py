@@ -2,27 +2,11 @@
 할 일 : 청킹   
 """
 
-from app.config import DATA_DIR
+from app.config import DATA_DIR, CHUNK_COLUMNS, MIN_LENGTH
 from app.io import read_csv, save_csv
 
 OUTPUT = DATA_DIR / "kb_chunk.csv"
 
-
-# 청킹 대상 - 라이프스타일이 드러나는 서술형 칸들
-CHUNK_COLUMNS = [
-    "persona",
-    "professional_persona",
-    "sports_persona",
-    "arts_persona",
-    "travel_persona",
-    "culinary_persona",
-    "family_persona",
-    "cultural_background",
-    "career_goals_and_ambitions",
-]
-
-# 너무 짧은 청크는 검색에 도움이 안 되므로 버린다
-MIN_LENGTH = 20
 
 def make_chunks(rows):
     """페르소나 한 명을 칸별 청크 여러 개로 쪼갠다."""

@@ -42,7 +42,7 @@ def load_all(cur):
     # 새 CSV에서 읽기
     import csv
     prefs = {}
-    with open(DATA_DIR / "user_preferences_v3.csv", encoding="utf-8-sig") as f:
+    with open(DATA_DIR / "user_preferences_v4.csv", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             prefs[row["customer_id"]] = {k: int(row[k]) for k in INDICATORS}
 
