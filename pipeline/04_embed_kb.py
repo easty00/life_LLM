@@ -14,32 +14,12 @@ from sentence_transformers import SentenceTransformer
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
-
-csv.field_size_limit(10 * 1024 * 1024)
+from app.io import read_csv
 
 BATCH_SIZE = 32
 
 SOURCE = DATA_DIR / "kb_chunk.csv"
 
-def read_csv(path, limit=None):
-    """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다."""
-    
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
-        if limit is None :
-            return fieldnames, list(reader)
-        
-        rows = []
-        
-        for i, row in enumerate(reader):
-            if i >= limit:
-                break
-            rows.append(row)
-            
-        return fieldnames, rows
-    
     
 def create_table(cur) :
     """청크와 벡터를 담을 표를 만든다.

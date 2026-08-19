@@ -12,10 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR, DB_PATH
-
-# CSV 한 칸에 아주 긴 글이 들어있을 수 있다 (페르소나 서술문).
-# 파이썬 기본 상한은 131,072 글자라 그걸 넘으면 에러가 나므로 미리 올려둔다.
-csv.field_size_limit(10*1024*1024)
+from app.io import read_csv
 
 # 타입을 살펴볼 때 읽을 줄 수. 11만 줄을 전부 읽을 필요가 없다.
 SAMPLE_SIZE = 500
@@ -59,25 +56,6 @@ MANUAL_FKS = {
 # 1단계 : 파일 및 데이터 읽기 함수
 ###============================================
 
-def read_csv(path, limit=None):
-    """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다."""
-    
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
-        if limit is None :
-            return fieldnames, list(reader)
-        
-        rows = []
-        
-        for i, row in enumerate(reader):
-            if i >= limit:
-                break
-            rows.append(row)
-            
-        return fieldnames, rows
-    
     
 def count_rows(path):
     """줄 수만 센다. 줄을 저장하지 않으므로 파일이 커도 메모리를 안 먹는다.

@@ -17,11 +17,9 @@ from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.config import DATA_DIR, DB_PATH
+from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
+from app.io import read_csv
 
-csv.field_size_limit(10 * 1024 * 1024)
-
-EMBED_MODEL = "intfloat/multilingual-e5-small"
 MEMBER_COUNT = 100
 
 SOURCE = DATA_DIR / "nemotron.csv"
@@ -42,26 +40,6 @@ CHUNK_COLUMNS = [
 
 MIN_LENGTH = 20
 
-
-def read_csv(path, limit=None):
-    """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다."""
-    
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
-        if limit is None :
-            return fieldnames, list(reader)
-        
-        rows = []
-        
-        for i, row in enumerate(reader):
-            if i >= limit:
-                break
-            rows.append(row)
-            
-        return fieldnames, rows
-    
 
 # 회원 읽고 customer_id 붙이기
 

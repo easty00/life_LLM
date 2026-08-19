@@ -13,10 +13,7 @@ from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.config import DB_PATH
-
-EMBED_MODEL = "intfloat/multilingual-e5-small"
-
+from app.config import DB_PATH, EMBED_MODEL
 
 #벡터 불러오기
 def load_vectors(cur):

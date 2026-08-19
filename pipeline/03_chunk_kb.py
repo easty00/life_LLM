@@ -9,30 +9,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DATA_DIR
-
-csv.field_size_limit(10 * 1024 * 1024)
+from app.io import read_csv, save_csv
 
 OUTPUT = DATA_DIR / "kb_chunk.csv"
 
-def read_csv(path, limit=None):
-    """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다."""
-    
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
-        if limit is None :
-            return fieldnames, list(reader)
-        
-        rows = []
-        
-        for i, row in enumerate(reader):
-            if i >= limit:
-                break
-            rows.append(row)
-            
-        return fieldnames, rows
-    
 
 # 청킹 대상 - 라이프스타일이 드러나는 서술형 칸들
 CHUNK_COLUMNS = [
@@ -69,23 +49,6 @@ def make_chunks(rows):
             })
     
     return chunks
-
-
-def save_csv(rows,path) :
-    """청크를 CSV 로 저장한다."""
-    if not rows:
-        print("[중단] 저장할 줄이 없습니다!")
-        return
-    
-    columns = list(rows[0].keys())
-    
-    with open(path, "w", encoding="utf-8-sig", newline="") as f :
-        writer = csv.DictWriter(f, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    size = path.stat().st_size / 1024 / 1024
-    print(f"✅ {path.name} 저장 · {len(rows):,}줄 · {size:.1f} MB")
 
 
 if __name__ == "__main__":
