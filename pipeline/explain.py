@@ -19,7 +19,6 @@ from app.db import kb_chunks
 
 client = anthropic.Anthropic(api_key=API_KEY)
 
-
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스 LIFE,FIT 의 설명 도우미입니다.
 계산이 끝난 추천 결과를 사용자에게 설명하는 역할입니다.
 
@@ -34,8 +33,11 @@ SYSTEM_PROMPT = """당신은 주거지 추천 서비스 LIFE,FIT 의 설명 도�
    "많다/적다" 가 아니라 "다른 동네와 비교해 어느 위치인지" 로 설명하세요.
 
 3. 데이터에 없는 것을 물으면 없다고 답하세요.
-   없는 것: 집값, 전월세, 통학 시간, 지하철 노선명, 학교 이름,
-   구체적인 시설 이름, 유동인구, 소음 수치
+   없는 것: 집값, 전월세, 교육비, 물가, 생활비, 통학 시간, 지하철 노선명, 학교 이름, 구체적인 시설 이름, 유동인구, 소음 수치
+   
+   지역에 대한 통념(강남은 비싸다, 노원은 학원가다 등)도 쓰지 마세요.
+   데이터에 없는 것은 알고 있어도 말하지 않습니다.
+   
    있는 것: 7개 지표(녹지·안전·교통·상권·의료·교육·문화)의 백분위 점수
 
 4. 참고 사례는 가상 인물 데이터에서 뽑은 것입니다.
@@ -139,3 +141,24 @@ def explain(query,weights,detailed,cases):
 
 
 # 실행부
+if __name__ == "__main__" :
+    model = SentenceTransformer(EMBED_MODEL)
+    
+    # 07번에서 나왔던 실제 값
+    query = "애들 학원 보내기 좋은 곳"
+    persona_query = "초등학생 자녀를 키우며 교육 환경과 학원 접근성을 중시하는 학부모"
+    weights = {"녹지": 3.2, "안전": 3.3, "교통": 2.7, "상권": 3.2,
+               "의료": 2.9, "교육": 4.6, "문화": 2.6}
+    
+    from pipeline.recommend import load_regions, build_scores, build_relative, recommend
+
+    names, values = load_regions()
+    scores = build_scores(values)
+    relative = build_relative(scores)
+    result = recommend(names, scores, relative, weights)
+    
+    detailed = with_scores(result, names, scores)
+    cases = find_cases(persona_query, model)
+    
+    print(f"⏳ 설명 생성 중...\n")
+    print(explain(query, weights, detailed, cases))
