@@ -13,11 +13,10 @@ from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.config import DATA_DIR, DB_PATH
+from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
 
 csv.field_size_limit(10 * 1024 * 1024)
 
-MODEL_NAME = "intfloat/multilingual-e5-small"
 BATCH_SIZE = 32
 
 SOURCE = DATA_DIR / "kb_chunk.csv"
@@ -127,7 +126,7 @@ if __name__ == "__main__" :
             sys.exit(0)
         cur.execute("DELETE FROM kb_chunk")
     
-    model = SentenceTransformer(MODEL_NAME)
+    model = SentenceTransformer(EMBED_MODEL)
     
     embed_and_store(cur, rows, model)
     

@@ -9,7 +9,7 @@ pipeline/ 은 DB 를 만들고 채우는 역할,
 
 import sqlite3
 
-from app.config import DB_PATH
+from app.config import DB_PATH, INDICATORS
 
 # check_same_thread=False 는 나중에 Flask 서버를 붙일 때 필요하다.
 # SQLite 연결은 기본적으로 만든 스레드에서만 쓸 수 있는데,
@@ -45,8 +45,6 @@ def dicts(sql, params=()):
 
 # ── 프로젝트 전용 조회 함수 ─────────────────────────────
 
-INDICATORS = ["녹지", "안전", "교통", "상권", "의료", "교육", "문화"]
-
 
 def member_chunks():
     """회원 청크와 벡터를 전부 꺼낸다. (07번에서 쓰던 것)"""
@@ -64,7 +62,7 @@ def member_weights(customer_ids):
     if not customer_ids:
         return []
     
-    markes = ", ".join("?" * len(customer_ids))
+    marks = ", ".join("?" * len(customer_ids))
     cols = ", ".join(INDICATORS)
 
     return dicts(

@@ -21,7 +21,7 @@ from app.config import DATA_DIR, DB_PATH
 
 csv.field_size_limit(10 * 1024 * 1024)
 
-MODEL_NAME = "intfloat/multilingual-e5-small"
+EMBED_MODEL = "intfloat/multilingual-e5-small"
 MEMBER_COUNT = 100
 
 SOURCE = DATA_DIR / "nemotron.csv"
@@ -80,14 +80,6 @@ def load_members(path, count=MEMBER_COUNT) :
     
     print(f"✅ 회원 {len(rows)}명 읽음 (C001 ~ C{str(len(rows)).zfill(3)})")
     return rows
-
-
-#if __name__ == "__main__":
-    members = load_members(SOURCE)
-
-    # 첫 사람이 제대로 붙었는지 확인
-    print(f"   💬 {members[0]['customer_id']}  {members[0]['persona'][:50]}...")
-    print(f"   💬 {members[-1]['customer_id']}  {members[-1]['persona'][:50]}...")
 
 
 def make_chunks(rows):
@@ -175,7 +167,7 @@ if __name__ == "__main__":
         cur.execute("DELETE FROM member_chunk")
         print(f"   기존 {done}줄 지움")
 
-    model = SentenceTransformer(MODEL_NAME)
+    model = SentenceTransformer(EMBED_MODEL)
     embed_and_store(cur, chunks, model)
 
     con.commit()

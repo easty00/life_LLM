@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import DB_PATH
 
-MODEL_NAME = "intfloat/multilingual-e5-small"
+EMBED_MODEL = "intfloat/multilingual-e5-small"
 
 
 #벡터 불러오기
@@ -36,7 +36,7 @@ def search(query, rows, vectors, model, top_k=5):
     """검색어와 비슷한 청크 top_k 개를 찾는다."""
 
     # e5 규칙: 질문에는 query: 를 붙인다 (저장할 때는 passage: 였다)
-    q = model.encode([f"quary: {query}"], normalize_embeddings=True)[0]
+    q = model.encode([f"query: {query}"], normalize_embeddings=True)[0]
     
     # 저장할 때 길이를 1로 맞춰뒀으므로, 곱하기만으로 유사도가 나온다
     scores = vectors @ q
@@ -57,7 +57,7 @@ if __name__ == "__main__" :
     rows, vectors = load_vectors(cur)
     print(f"✅ 청크 {len(rows):,}개 · 벡터 {vectors.shape}")
     
-    model = SentenceTransformer (MODEL_NAME)
+    model = SentenceTransformer (EMBED_MODEL)
     print()
     
     while True:

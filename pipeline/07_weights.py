@@ -16,12 +16,9 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.config import DB_PATH, API_KEY, MODEL
+from app.config import DB_PATH, API_KEY, MODEL, EMBED_MODEL, INDICATORS
 from app.db import member_chunks, member_weights
 
-
-EMBED_MODEL = "intfloat/multilingual-e5-small"
-INDICATORS = ["녹지", "안전", "교통", "상권", "의료", "교육", "문화"]
 
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스의 분석 도구입니다.
 사용자의 검색어를 읽고 두 가지를 만드세요.

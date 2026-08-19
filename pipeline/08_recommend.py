@@ -113,23 +113,9 @@ def recommend(names, scores, relative, weights, top_k=5, mix=0.5, sharpen=6):
 
 
 if __name__ == "__main__" :
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-    
     names, values = load_regions(cur)
     scores = build_scores(values)
     relative = build_relative(scores)
-    
-    """
-    print(f"✅ 행정동 {len(names)}개 · 칸 {len(values)}개")
-    print(f"   💬 예시: {names[0]}")
-    print(f"   💬 공원_밀도 범위: {values['공원_밀도'].min():.1f} ~ {values['공원_밀도'].max():.1f}")
-    print(f"   💬 학원_밀도 범위: {values['학원_밀도'].min():.1f} ~ {values['학원_밀도'].max():.1f}")
-    print(f"-----------------")
-    for k, v in scores.items():
-        print(f"   💬 {k}: {v.min():.1f} ~ {v.max():.1f} (평균 {v.mean():.1f})")
-    """
-    
     
     # 07번에서 나왔던 실제 가중치로 시험해본다
     tests = {
@@ -146,44 +132,6 @@ if __name__ == "__main__" :
     
     for query, weights in tests.items():
         print(f"검색어: {query}")
-        result = recommend(names, scores, relative, weights)
-        for rank, (name, score) in enumerate(result, start=1):
+        for rank, (name, score) in enumerate(recommend(names, scores, relative, weights), start=1):
             print(f"   {rank}위 {name:20s} {score:.1f}점")
         print()
-    
-    print(f"==============================")
-        
-    # 상대점수가 실제로 만들어졌는지, 범위가 어떤지
-    print("상대점수 범위:")
-    for k in relative:
-        r = relative[k]
-        print(f"   {k}: {r.min():+.1f} ~ {r.max():+.1f}")
-    print()
-
-    # 신당제5동 vs 교육 1등 동네를 직접 비교
-    for target in ["중구 신당제5동", "노원구 중계1동", "강남구 대치1동"]:
-        i = names.index(target)
-        print(f"{target}")
-        print(f"   절대: " + " ".join(f"{k} {scores[k][i]:.0f}" for k in scores))
-        print(f"   상대: " + " ".join(f"{k} {relative[k][i]:+.0f}" for k in relative))
-        print()
-        
-    print(f"==============================")
-    
-        # 시험 1: mix 를 바꿔가며
-    for mix in [0.0, 0.3, 0.5]:
-        print(f"--- mix={mix} ---")
-        for name, score in recommend(names, scores, relative, weights, mix=mix):
-            print(f"   {name:20s} {score:.1f}")
-        print()
-
-    # 시험 2: Claude 초안(보정 전) 가중치로
-    raw = {"녹지": 3, "안전": 4, "교통": 4, "상권": 3, "의료": 3, "교육": 5, "문화": 3}
-
-    for s in [1, 3, 6, 10]:
-        print(f"--- sharpen={s} ---")
-        for name, score in recommend(names, scores, relative, weights, sharpen=s):
-            print(f"   {name:20s} {score:.1f}")
-        print()
-
-    con.close()
