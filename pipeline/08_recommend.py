@@ -13,6 +13,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.config import DB_PATH
+from app.db import region_densities
 
 INDICATOR_COLUMNS = {
     "녹지" : ["공원_밀도"],
@@ -33,17 +34,14 @@ def load_regions(cur):
             if c not in cols:
                 cols.append(c)
 
-    col_sql = ", ".join(f'"{c}"' for c in cols)
-    rows = cur.execute(
-        f'SELECT 구, 행정동명, {col_sql} FROM master_dataset_v3'
-    ).fetchall()
+    rows = region_densities(cols)
     
-    names = [f"{r[0]} {r[1]}" for r in rows]
+    names = [f"{r['구']} {r['행정동명']}" for r in rows]
     
     # 칸별 값 묶음. values["공원_밀도"] = 427개 숫자 배열
     values = {}
-    for i, c in enumerate(cols):
-        values[c] = np.array([r[i + 2] or 0 for r in rows], dtype="float64")
+    for c in cols:
+        values[c] = np.array([r[c] or 0 for r in rows], dtype="float64")
     
     return names, values
 

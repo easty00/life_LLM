@@ -17,6 +17,7 @@ from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.config import DB_PATH, API_KEY, MODEL
+from app.db import member_chunks, member_weights
 
 
 EMBED_MODEL = "intfloat/multilingual-e5-small"
@@ -64,12 +65,9 @@ CLAUDE_RATIO = 0.7
 
 # 함수들
 def load_member_vectors(cur):
-    """회원 청크 벡터를 전부 꺼낸다."""
-    rows = cur.execute(
-        "SELECT customer_id, category, text, vector FROM member_chunk"
-    ).fetchall()
-    
-    vectors = np.array([json.loads(r[3]) for r in rows], dtype="float32")
+    """회원 청크 벡터를 전부 꺼낸다. numpy 배열로 만든다."""
+    rows = member_chunks()
+    vectors = np.array([json.loads(r["vector"]) for r in rows], dtype="float32")
     return rows, vectors
 
 
@@ -83,9 +81,10 @@ def find_similar_members(query, rows, vectors, model, top_k=5) :
     scores = vectors @ q
     
     best = {}
-    for (customer_id, category, text, _), score in zip(rows, scores):
-        if customer_id not in best or score > best[customer_id][0]:
-            best[customer_id] = (float(score), category, text)
+    for row, score in zip(rows, scores):
+        cid = row["customer_id"]
+        if cid not in best or score > best[cid][0]:
+            best[cid] = (float(score), row["category"], row["text"])
     
     ranked = sorted(best.items(), key=lambda x: x[1][0], reverse=True)
     return ranked[:top_k]
