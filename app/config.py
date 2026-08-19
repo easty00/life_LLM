@@ -1,5 +1,7 @@
-from pathlib import Path
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -7,16 +9,13 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DB_PATH = ROOT / "life.db"
 
+# .env 를 읽어 환경변수로 올린다
+load_dotenv()                      # .env 를 읽어 환경변수로 올린다
 
-# CLAUDE API 추가
-# 키는 코드에 적지 않는다. 환경변수에서 읽는다
-# 학원 PC 처럼 환경변수를 못 넣는 곳에서만 아래 줄에 임시로 키를 붙인다.
-# ⚠️ 쓰고 나면 반드시 "" 로 되돌릴 것. 커밋되면 키가 영구히 노출된다
-TEMP_KEY = ""
-API_KEY = os.environ["ANTHROPIC_API_KEY"]
-
+API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 if not API_KEY:
-    raise RuntimeError("API 키가 없다. 환경변수를 등록하거나 TEMP_KEY 에 임시로 넣어라.")
+    raise RuntimeError("API 키가 없다. .env 파일을 확인해라.")
+
 
 MODEL = "claude-haiku-4-5-20251001"
 

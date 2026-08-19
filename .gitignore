@@ -5,3 +5,5 @@ data/*.gz
 
 *.db
 __pycache__/
+
+.env
