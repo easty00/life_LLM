@@ -10,10 +10,9 @@ import json
 import sqlite3
 import time
 
-from sentence_transformers import SentenceTransformer
-
-from app.config import DATA_DIR, DB_PATH, EMBED_MODEL, CHUNK_COLUMNS, MIN_LENGTH
+from app.config import DATA_DIR, DB_PATH, CHUNK_COLUMNS, MIN_LENGTH
 from app.io import read_csv
+from app.llm import get_embedder
 
 MEMBER_COUNT = 100
 
@@ -76,7 +75,7 @@ def to_passage(text):
     return f"passage: {text}"
 
 
-def embed_and_store(cur, chunks, model) :
+def embed_and_store(cur, chunks) :
     """청크를 벡터로 바꿔 DB 에 넣는다. 4번과 같음"""
 
     docs = [to_passage(c["text"]) for c in chunks]
@@ -84,18 +83,13 @@ def embed_and_store(cur, chunks, model) :
     print(f"⏳ {len(docs):,}개 청크를 벡터로 바꾸는 중...")
     started = time.time()
 
-    vectors = model.encode(
-        docs,
-        normalize_embeddings = True,
-        batch_size = 32,
-        show_progress_bar = True,
-    )
+    vectors = get_embedder().embed_documents(docs)
     
     print(f"✅ 완료 ({time.time() - started:.0f}초)")
     
     values = [
         (c["customer_id"], c["category"], c["text"],
-         json.dumps(vec.tolist()))
+         json.dumps(vec))
         for c, vec in zip(chunks, vectors)
     ]
     
@@ -123,8 +117,7 @@ if __name__ == "__main__":
         cur.execute("DELETE FROM member_chunk")
         print(f"   기존 {done}줄 지움")
 
-    model = SentenceTransformer(EMBED_MODEL)
-    embed_and_store(cur, chunks, model)
+    embed_and_store(cur, chunks)
 
     con.commit()
 

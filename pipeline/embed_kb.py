@@ -7,10 +7,9 @@ import sqlite3
 import sys
 import time
 
-from sentence_transformers import SentenceTransformer
-
 from app.config import DATA_DIR, DB_PATH, EMBED_MODEL
 from app.io import read_csv
+from app.llm import get_embedder
 
 BATCH_SIZE = 32
 
@@ -45,7 +44,7 @@ def to_passage(text):
     return f"passage: {text}"
 
 
-def embed_and_store(cur, rows, model) :
+def embed_and_store(cur, rows) :
     """청크를 벡터로 바꿔 DB 에 넣는다."""
     
     # e5 규칙: 저장할 문서에는 passage: 를 붙인다
@@ -54,14 +53,7 @@ def embed_and_store(cur, rows, model) :
     print(f"⏳ {len(docs):,}개 청크를 벡터로 바꾸는 중... (2만2천 개 기준 약 5분)")
     started = time.time()
     
-    # normalize_embeddings=True 는 벡터 길이를 1로 맞춘다.
-    # 길이가 1이면 두 벡터를 곱하는 것만으로 유사도가 나온다 (코사인 유사도)
-    vectors = model.encode(
-        docs,
-        normalize_embeddings = True,
-        batch_size = BATCH_SIZE,
-        show_progress_bar = True,
-    )
+    vectors = get_embedder().embed_documents(docs)
     
     print(f"✅ 완료 ({time.time() - started:.0f}초)")
     
@@ -70,7 +62,7 @@ def embed_and_store(cur, rows, model) :
     # vec.tolist() : numpy 숫자 묶음을 파이썬 목록으로 바꾸는 것. json.dumps가 처리할 수 있음.
     values = [
         (r["uuid"], r["district"], r["category"], r["text"],
-         json.dumps(vec.tolist()))
+         json.dumps(vec))
         for r, vec in zip(rows, vectors)
     ]
     
@@ -102,9 +94,7 @@ if __name__ == "__main__" :
             sys.exit(0)
         cur.execute("DELETE FROM kb_chunk")
     
-    model = SentenceTransformer(EMBED_MODEL)
-    
-    embed_and_store(cur, rows, model)
+    embed_and_store(cur, rows)
     
     con.commit()
     

@@ -1,3 +1,5 @@
+""" 설정값을 모아두는 곳 """
+
 import os
 from pathlib import Path
 

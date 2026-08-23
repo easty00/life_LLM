@@ -7,9 +7,8 @@ import sqlite3
 import time
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
-from app.config import DB_PATH, EMBED_MODEL
+from app.llm import get_embedder, to_query
 
 #벡터 불러오기
 def load_vectors(cur):
@@ -25,11 +24,11 @@ def load_vectors(cur):
 
 
 # 검색
-def search(query, rows, vectors, model, top_k=5):
+def search(query, rows, vectors, top_k=5):
     """검색어와 비슷한 청크 top_k 개를 찾는다."""
 
     # e5 규칙: 질문에는 query: 를 붙인다 (저장할 때는 passage: 였다)
-    q = model.encode([f"query: {query}"], normalize_embeddings=True)[0]
+    q = np.array(get_embedder().embed_query(to_query(query)), dtype="float32"
     
     # 저장할 때 길이를 1로 맞춰뒀으므로, 곱하기만으로 유사도가 나온다
     scores = vectors @ q
@@ -50,16 +49,13 @@ if __name__ == "__main__" :
     rows, vectors = load_vectors(cur)
     print(f"✅ 청크 {len(rows):,}개 · 벡터 {vectors.shape}")
     
-    model = SentenceTransformer (EMBED_MODEL)
-    print()
-    
     while True:
         query = input("검색어> ").strip()
         if not query:
             break
         
         started = time.time()
-        found = search(query, rows, vectors, model)
+        found = search(query, rows, vectors)
         elapsed = time.time() - started
         
         print(f"   ({elapsed:.2f}초)")

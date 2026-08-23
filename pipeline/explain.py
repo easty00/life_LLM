@@ -9,15 +9,12 @@ Claude 가 숫자를 지어내지 못하도록 프롬프트에서 강하게 제�
 """
 
 import json
-
-import anthropic
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
-from app.config import API_KEY, MODEL, EMBED_MODEL, INDICATORS
+from app.config import INDICATORS
 from app.db import kb_chunks
+from app.llm import get_llm, get_embedder, to_query
 
-client = anthropic.Anthropic(api_key=API_KEY)
 
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스 LIFE,FIT 의 설명 도우미입니다.
 계산이 끝난 추천 결과를 사용자에게 설명하는 역할입니다.
@@ -74,7 +71,7 @@ def with_scores(result, names, scores):
 
 
 # 지식베이스에서 사례찾기
-def find_cases(persona_query, model, top_k=3):
+def find_cases(persona_query, top_k=3):
     """검색 문장과 비슷한 지식베이스 청크를 찾는다.
 
     회원 100명이 아니라 지식베이스 2,500명에서 찾는다.
@@ -83,7 +80,7 @@ def find_cases(persona_query, model, top_k=3):
     rows = kb_chunks()
     vectors = np.array([json.loads(r["vector"]) for r in rows], dtype="float32")
     
-    q = model.encode([f"query: {persona_query}"], normalize_embeddings=True)[0]
+    q = np.array(get_embedder().embed_query(to_query(persona_query)), dtype="float32")
     scores = vectors @ q
     
     top = scores.argsort()[::-1][:top_k]
@@ -130,19 +127,15 @@ def explain(query,weights,detailed,cases):
     """추천 결과를 설명문으로 만든다."""
     context = build_context(query, weights, detailed, cases)
     
-    res = client.messages.create(
-        model = MODEL,
-        max_tokens = 800,
-        system = SYSTEM_PROMPT,
-        messages = [{"role":"user","content": context}],
-    )
+    messages = [
+        ("system", SYSTEM_PROMPT),
+        ("human", context),
+    ]
+    return get_llm(max_tokens=800).invoke(messages).content.strip()
     
-    return res.content[0].text.strip()
-
 
 # 실행부
 if __name__ == "__main__" :
-    model = SentenceTransformer(EMBED_MODEL)
     
     # 07번에서 나왔던 실제 값
     query = "애들 학원 보내기 좋은 곳"
@@ -158,7 +151,7 @@ if __name__ == "__main__" :
     result = recommend(names, scores, relative, weights)
     
     detailed = with_scores(result, names, scores)
-    cases = find_cases(persona_query, model)
+    cases = find_cases(persona_query)
     
     print(f"⏳ 설명 생성 중...\n")
     print(explain(query, weights, detailed, cases))

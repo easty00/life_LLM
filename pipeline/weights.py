@@ -6,13 +6,11 @@
 """
 
 import json
-import anthropic
 import numpy as np
 
-from sentence_transformers import SentenceTransformer
-
-from app.config import API_KEY, MODEL, EMBED_MODEL, INDICATORS
+from app.config import INDICATORS
 from app.db import member_chunks, member_weights
+from app.llm import get_llm, get_embedder, to_query
 
 
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스의 분석 도구입니다.
@@ -48,8 +46,6 @@ SYSTEM_PROMPT = """당신은 주거지 추천 서비스의 분석 도구입니�
 {"녹지": 3, "안전": 3, "교통": 3, "상권": 3, "의료": 3, "교육": 3, "문화": 3,
  "persona_query": "..."}"""
 
-client = anthropic.Anthropic(api_key=API_KEY)
-
 # Claude 초안과 회원 평균을 몇 대 몇으로 섞을지.
 # 0.7 이면 Claude 70%, 회원 30%
 CLAUDE_RATIO = 0.7
@@ -63,13 +59,13 @@ def load_member_vectors():
     return rows, vectors
 
 
-def find_similar_members(query, rows, vectors, model, top_k=5) :
+def find_similar_members(query, rows, vectors, top_k=5) :
     """검색어와 비슷한 회원을 찾는다.
 
     청크 단위로 검색하면 한 사람이 여러 번 걸릴 수 있다.
     그래서 사람별 최고 점수만 남기고 상위 top_k 명을 고른다.
     """
-    q = model.encode([f"query: {query}"], normalize_embeddings=True)[0]
+    q = np.array(get_embedder().embed_query(to_query(query)), dtype="float32")
     scores = vectors @ q
     
     best = {}
@@ -95,14 +91,12 @@ def ask_claude(query):
      교육 1점짜리 회원들이 뽑혔다. z = -0.94)
     그래서 검색 전에 사람 묘사로 바꿔서 성격을 맞춘다.
     """
-    res = client.messages.create(
-        model=MODEL,
-        max_tokens=300,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": query}],
-    )
+    messages = [
+        ("system", SYSTEM_PROMPT),
+        ("human", query),
+    ]        
+    text = get_llm(max_tokens=300).invoke(messages).content.strip()
     
-    text = res.content[0].text.strip()
         # 혹시 ```json 같은 게 붙어 나오면 떼어낸다
     text = text.replace("```json", "").replace("```","").strip()
     
@@ -148,9 +142,6 @@ if __name__ == "__main__":
     rows, vectors = load_member_vectors()
     print(f"✅ 회원 청크 {len(rows)}개")
 
-    model = SentenceTransformer(EMBED_MODEL)
-    print()
-
     for q in ["애들 학원 보내기 좋은 곳",
               "병원이 가깝고 할머니를 모시고 살기 좋은 곳",
               "멀지 않은 거리에 백화점이 있는 곳"]:
@@ -161,7 +152,7 @@ if __name__ == "__main__":
         print(f"   [→] 검색용 문장 : {persona_query}")
         
         # 원래 검색어가 아니라 번역된 문장으로 검색한다
-        similar = find_similar_members(persona_query, rows, vectors, model)
+        similar = find_similar_members(persona_query, rows, vectors)
         ids = [cid for cid, _ in similar]
         members = member_weights(ids)
         print(f"   [A] 유사 회원   : {ids}")
