@@ -30,7 +30,7 @@ def get_embedder() :
             # 벡터 길이를 1로 맞춘다. 그래야 곱하기만으로 유사도가 나온다.
             # LangChain 은 이 옵션을 자동으로 켜 주지 않는다
             encode_kwargs = {"normalize_embeddings" : True},
-            show_progress = True,       #진행 막대
+            show_progress = False,       #진행 막대
         )
     return _embedder
 
