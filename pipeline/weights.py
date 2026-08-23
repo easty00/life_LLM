@@ -8,9 +8,9 @@
 import json
 import numpy as np
 
-from app.config import INDICATORS
-from app.db import member_chunks, member_weights
-from app.llm import get_llm, get_embedder, to_query
+from core.config import INDICATORS
+from core.db import member_chunks, member_weights
+from core.llm import get_llm, get_embedder, to_query
 
 
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스의 분석 도구입니다.

@@ -10,8 +10,8 @@ import json
 
 import numpy as np
 
-from app.db import query
-from app.llm import get_embedder, to_passage
+from core.db import query
+from core.llm import get_embedder, to_passage
 
 SAMPLE = 5
 

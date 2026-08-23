@@ -10,9 +10,9 @@ import json
 import sqlite3
 import time
 
-from app.config import DATA_DIR, DB_PATH, CHUNK_COLUMNS, MIN_LENGTH
-from app.io import read_csv
-from app.llm import get_embedder
+from core.config import DATA_DIR, DB_PATH, CHUNK_COLUMNS, MIN_LENGTH
+from core.io import read_csv
+from core.llm import get_embedder
 
 MEMBER_COUNT = 100
 

@@ -15,7 +15,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.config import DB_PATH, DATA_DIR, EMBED_MODEL, INDICATORS
+from core.config import DB_PATH, DATA_DIR, EMBED_MODEL, INDICATORS
 
 QUERIES = [
     ("산책 좋아하고 조용한 데", "녹지"),      # 이 검색어라면 이 지표가 달라야 한다

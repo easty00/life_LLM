@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from app.db import region_densities
+from core.db import region_densities
 
 INDICATOR_COLUMNS = {
     "녹지" : ["공원_밀도"],

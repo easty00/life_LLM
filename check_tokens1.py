@@ -4,8 +4,8 @@ import statistics
 from transformers import AutoTokenizer, logging as hf_logging
 hf_logging.set_verbosity_error()
 
-from app.config import DATA_DIR, EMBED_MODEL
-from app.io import read_csv
+from core.config import DATA_DIR, EMBED_MODEL
+from core.io import read_csv
 
 MAX_TOKENS = 512
 tok = AutoTokenizer.from_pretrained(EMBED_MODEL)

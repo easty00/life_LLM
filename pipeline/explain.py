@@ -11,9 +11,9 @@ Claude 가 숫자를 지어내지 못하도록 프롬프트에서 강하게 제�
 import json
 import numpy as np
 
-from app.config import INDICATORS
-from app.db import kb_chunks
-from app.llm import get_llm, get_embedder, to_query
+from core.config import INDICATORS
+from core.db import kb_chunks
+from core.llm import get_llm, get_embedder, to_query
 
 
 SYSTEM_PROMPT = """당신은 주거지 추천 서비스 LIFE,FIT 의 설명 도우미입니다.

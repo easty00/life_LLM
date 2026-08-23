@@ -7,8 +7,8 @@ import time
 
 import numpy as np
 
-from app.llm import get_embedder, to_query
-from app.db import kb_chunks
+from core.llm import get_embedder, to_query
+from core.db import kb_chunks
 
 
 #벡터 불러오기

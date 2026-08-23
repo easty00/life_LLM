@@ -2,7 +2,7 @@
 검색어 하나로 전체 파이프라인을 돌리는 통합 창구.
 
 이 파일에는 로직이 없다. weights → recommend → explain 을
-순서대로 부르기만 한다. 서버(find-home 의 app.py)는
+순서대로 부르기만 한다. 서버(find-home 의 core.py)는
 이 파일의 search() 하나만 알면 된다.
 
 무거운 준비물(벡터·점수)은 처음 부를 때 한 번만 만든다.
@@ -18,7 +18,7 @@ from pipeline.explain import explain, find_cases, with_scores
 from pipeline.recommend import load_regions, build_scores, build_relative, recommend
 from pipeline.weights import load_member_vectors, ask_claude, blend, find_similar_members
 
-from app.db import member_weights
+from core.db import member_weights
 
 # ── 준비물 보관함 ──────────────────────────────
 _ready = None
