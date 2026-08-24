@@ -1,4 +1,4 @@
-
+import sys
 import re
 import sqlite3
 
@@ -260,13 +260,13 @@ tables = {}
 for path in sorted(DATA_DIR.glob("*.csv")):
     if path.stem.startswith(EXCLUDE_PREFIX):
         continue
-    columns, rows = read_csv(path, limit=SAMPLE_SIZE)
+    columns, sample = read_csv(path, limit=SAMPLE_SIZE)
     name = table_name(path)     # ← path.stem 대신 이걸 써야 v2가 떨어진 이름으로 저장됨
     tables[name] = {
+        "path": path,          # 적재할 때 전체를 다시 읽으려고 경로를 남긴다
         "columns" : columns,
-        "rows" : rows,
-        "type" : {col: column_type(col, rows) for col in columns},
-        "pk" : infer_pk(columns, rows)
+        "type" : {col: column_type(col, sample) for col in columns},
+        "pk" : infer_pk(columns, sample)
     }
 
 
@@ -440,9 +440,13 @@ if __name__ == "__main__" :
         print(f"✅ {name} 표 생성")
     
     # 4. 데이터 넣기
+    #    타입 추론에 쓴 500행 표본이 아니라 CSV 전체를 다시 읽는다.
+    #    표본을 그대로 넣으면 6만 행짜리 파일도 500행만 들어가고 에러도 안 난다
     for name in order:
         table = tables[name]
         columns = table["columns"]
+        
+        _, rows = read_csv(table["path"])        # limit 없이 전체
         
         # INSERT INTO customers (customer_id, name, ...) VALUES (?, ?, ...)
         # ? 자리에 값이 하나씩 들어간다. 값을 직접 문자열로 붙이면
@@ -453,11 +457,14 @@ if __name__ == "__main__" :
         
         values = [
             tuple(convert(row[col], table["type"][col]) for col in columns)
-            for row in table["rows"]
+            for row in rows
         ]
         
         cur.executemany(sql, values)
-        print(f"✅ {name:20s} {len(values):6,d}줄 적재")
+            # CSV 행수와 적재 행수가 같은지 확인한다. 조용한 누락을 막는 장치다
+        actual = count_rows(table["path"])
+        mark = "✅" if len(values) == actual else "⚠️"
+        print(f"{mark} {name:20s} {len(values):7,d}줄 적재 (CSV {actual:,}행)")
     
     # 5. FK 칸에 색인. 조인할 때 훨씬 빨라진다
     for name, table in tables.items():

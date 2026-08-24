@@ -40,23 +40,39 @@ def read_csv(path, limit=None):
         return fieldnames, rows
 
 
-def save_csv(rows, path):
-    """뽑은 표본(딕셔너리 목록)을 CSV 로 저장한다."""
-    if not rows:
-        print("[중단] 저장할 줄이 없어요!")
-        return
-    
-    columns = list(rows[0].keys())
-    
-    # newline="" 이 없으면 윈도우에서 줄 사이에 빈 줄이 하나씩 들어간다
-    with open(path, "w", encoding="utf-8-sig", newline="") as f :
-        writer = csv.DictWriter(f, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows(rows)
-    
-    size = path.stat().st_size / 1024 / 1024
-    print(f"✅ {path.name} 저장 · {len(rows):,}줄 · {size:.1f} MB")
+def read_csv(path, limit=None):
+    """CSV 를 읽어 (칸 이름 목록, 줄 목록) 을 돌려준다.
 
+    인코딩을 차례로 시도하는 이유 —
+    공공데이터는 utf-8 과 cp949 가 섞여 있다.
+    엑셀에서 저장한 파일은 대개 cp949 다.
+
+    utf-8-sig 를 먼저 쓰는 이유 —
+    윈도우에서 만든 CSV 는 맨 앞에 BOM 이라는 눈에 안 보이는 표식이 붙는다.
+    "utf-8" 로 읽으면 첫 칸 이름이 'customer_id' 가 아니라
+    '\ufeffcustomer_id' 가 되어 표끼리 잇는 작업이 통째로 깨진다
+    """
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            with open(path, encoding=enc, newline="") as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+
+                if limit is None:
+                    return fieldnames, list(reader)
+
+                rows = []
+                for i, row in enumerate(reader):
+                    if i >= limit:
+                        break
+                    rows.append(row)
+
+                return fieldnames, rows
+
+        except UnicodeDecodeError:
+            continue
+
+    raise UnicodeDecodeError(f"{path.name} 인코딩 판별 실패 (utf-8, cp949 모두 실패)")
 
 def count_rows(path):
     """줄 수만 센다. 줄을 저장하지 않으므로 파일이 커도 메모리를 안 먹는다."""
