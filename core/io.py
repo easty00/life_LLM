@@ -76,8 +76,13 @@ def read_csv(path, limit=None):
 
 def count_rows(path):
     """줄 수만 센다. 줄을 저장하지 않으므로 파일이 커도 메모리를 안 먹는다."""
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        return sum(1 for _ in csv.DictReader(f))
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            with open(path, encoding=enc, newline="") as f:
+                return sum(1 for _ in csv.DictReader(f))
+        except UnicodeDecodeError:
+            continue
+    return 0
     
     
     

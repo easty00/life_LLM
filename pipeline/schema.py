@@ -323,7 +323,7 @@ def build_create(name, table) :
     pk = table["pk"] or []      # pk 가 None 일 수도 있으니 빈 목록으로
                                 # infer_pk가 못 찾아서 None을 돌려준 경우를 대비    
     for col in table["columns"] :
-        piece = f"    {col} {table['type'][col]}"
+        piece = f'    "{col}" {table["type"][col]}'
         
         # 칸이 하나뿐인 PK 만 여기서 붙인다
         if len(pk) == 1 and col == pk[0] :
@@ -333,18 +333,18 @@ def build_create(name, table) :
     
     # 칸이 둘 이상인 PK(복합키)는 맨 아래 따로 적는다
     if len(pk) > 1:
-        joined = ", ".join(pk)
+        joined = ", ".join(f'"{c}"' for c in pk)
         lines.append(f"    PRIMARY KEY ({joined})")
-    
-    for col, owner in table["fks"] :
-        lines.append(f"    FOREIGN KEY ({col}) REFERENCES {owner}({col})")
+
+    for col, owner in table["fks"]:
+        lines.append(f'    FOREIGN KEY ("{col}") REFERENCES "{owner}"("{col}")')
     
     for cols, owner, owner_cols in table.get("manual_fks", []):
         mine = ", ".join(cols)
         theirs = ", ".join(owner_cols)
         lines.append(f"    FOREIGN KEY ({mine}) REFERENCES {owner}({theirs})")  
     
-    return f"CREATE TABLE {name} (\n" + ",\n".join(lines) + "\n)"
+    return f'CREATE TABLE "{name}" (\n' + ",\n".join(lines) + "\n)"
 
 #if __name__ == "__main__":
 #    for name, table in tables.items():
@@ -452,8 +452,8 @@ if __name__ == "__main__" :
         # ? 자리에 값이 하나씩 들어간다. 값을 직접 문자열로 붙이면
         # 따옴표가 섞인 데이터에서 SQL 이 깨지므로 이 방식을 쓴다
         marks = ", ".join("?" * len(columns))
-        col_list = ", ".join(columns)
-        sql = f"INSERT INTO {name} ({col_list}) VALUES ({marks})"
+        col_list = ", ".join(f'"{c}"' for c in columns)
+        sql = f'INSERT INTO "{name}" ({col_list}) VALUES ({marks})'
         
         values = [
             tuple(convert(row[col], table["type"][col]) for col in columns)
@@ -469,7 +469,7 @@ if __name__ == "__main__" :
     # 5. FK 칸에 색인. 조인할 때 훨씬 빨라진다
     for name, table in tables.items():
         for col, _ in table["fks"]:
-            cur.execute(f"CREATE INDEX idx_{name}_{col} ON {name}({col})")
+            cur.execute(f'CREATE INDEX "idx_{name}_{col}" ON "{name}"("{col}")')
     
     con.commit()
     con.close()
